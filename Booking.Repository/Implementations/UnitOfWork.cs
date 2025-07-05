@@ -1,0 +1,39 @@
+﻿using Booking.Repository.ApplicationContext;
+using Booking.Repository.Interfaces;
+using Booking.Repository.Models;
+
+namespace Booking.Repository.Implementations
+{
+    public class UnitOfWork : IUnitOfWork
+    {
+        private readonly AppDbContext _context;
+        public IGenericRepository<User> Users { get; }
+        public IGenericRepository<Reservation> Reservations { get; }
+        public IGenericRepository<Hotel> Hotels { get; }
+        public IGenericRepository<Room> Rooms { get; }
+        public IGenericRepository<HotelImage> HotelImages { get; }
+        public IGenericRepository<RoomImage> RoomImages { get; }
+        public IGenericRepository<Review> Reviews { get; }
+        public IGenericRepository<Payment> Payments { get; }
+        public UnitOfWork(AppDbContext context)
+        {
+            _context = context;
+            Users = new GenericRepository<User>(_context);
+            Reservations = new GenericRepository<Reservation>(_context);
+            Hotels = new GenericRepository<Hotel>(_context);
+            Rooms = new GenericRepository<Room>(_context);
+            HotelImages = new GenericRepository<HotelImage>(_context);
+            RoomImages = new GenericRepository<RoomImage>(_context);
+            Reviews = new GenericRepository<Review>(_context);
+            Payments = new GenericRepository<Payment>(_context);
+        }
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
+        public void Dispose()
+        {
+            _context.Dispose();
+        }
+    }
+}
