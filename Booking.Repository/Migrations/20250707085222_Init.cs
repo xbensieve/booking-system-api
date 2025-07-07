@@ -39,6 +39,7 @@ namespace Booking.Repository.Migrations
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    AvatarUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Role = table.Column<int>(type: "int", nullable: false),
                     AuthProvider = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
