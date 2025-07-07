@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Booking.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250705093227_Init")]
+    [Migration("20250707085222_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -298,6 +298,9 @@ namespace Booking.Repository.Migrations
                     b.Property<string>("AuthProvider")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

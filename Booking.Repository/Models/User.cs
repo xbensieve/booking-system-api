@@ -20,6 +20,7 @@ namespace Booking.Repository.Models
         [Phone(ErrorMessage = "Invalid phone number format.")]
         [StringLength(20, ErrorMessage = "Phone number must not exceed 20 characters.")]
         public string? PhoneNumber { get; set; }
+        public string? AvatarUrl { get; set; }
         [Required]
         public UserRole Role { get; set; } = UserRole.Customer;
         [StringLength(50)]
