@@ -18,7 +18,7 @@ namespace Booking.Service.Implementations
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
-        public async Task<ApiResponse<object>> AdddHotelImagesAsync(int hotelId, List<HotelImageRequest> images)
+        public async Task<ApiResponse<object>> AddHotelImagesAsync(int hotelId, List<HotelImageRequest> images)
         {
             var hotel = await _unitOfWork.Hotels.GetByIdAsync(hotelId);
             if (hotel == null)
@@ -26,7 +26,7 @@ namespace Booking.Service.Implementations
                 return ApiResponse<object>.Fail("Hotel not found.");
             }
 
-            List<int> imageIds = new List<int>();
+            List<string> imageUrls = new List<string>();
 
             foreach (var item in images)
             {
@@ -37,7 +37,7 @@ namespace Booking.Service.Implementations
                     IsMain = false,
                 };
                 await _unitOfWork.HotelImages.AddAsync(image);
-                imageIds.Add(image.Id);
+                imageUrls.Add(image.ImageUrl);
             }
 
             try
@@ -46,7 +46,7 @@ namespace Booking.Service.Implementations
 
                 if (result > 0)
                 {
-                    return ApiResponse<object>.Ok(new { imageIds }, "Images added successfully.");
+                    return ApiResponse<object>.Ok(new { imageUrls }, "Images added successfully.");
                 }
                 else
                 {

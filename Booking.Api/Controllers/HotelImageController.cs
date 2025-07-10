@@ -35,18 +35,11 @@ namespace Booking.Api.Controllers
                 return BadRequest(new { message = "Cannot upload more than 10 images at once" });
             }
 
-            List<HotelImageRequest> uploadedImages = new List<HotelImageRequest>();
-
-            foreach (var image in images)
+            var uploadTasks = images.Select(async image =>
             {
-                if (image.Length > 5 * 1024 * 1024)
-                {
-                    return BadRequest(new { message = $"Image {image.FileName} exceeds 5MB limit" });
-                }
-                if (!IsImageFile(image))
-                {
-                    return BadRequest(new { message = $"File {image.FileName} is not a valid image" });
-                }
+                if (image.Length > 5 * 1024 * 1024) throw new ArgumentException($"Image {image.FileName} exceeds 5MB limit");
+                if (!IsImageFile(image)) throw new ArgumentException($"File {image.FileName} is not a valid image");
+
                 using var stream = image.OpenReadStream();
                 var uploadParams = new ImageUploadParams
                 {
@@ -56,22 +49,27 @@ namespace Booking.Api.Controllers
                 };
                 var uploadResult = await _cloudinary.UploadAsync(uploadParams);
                 if (uploadResult.StatusCode != System.Net.HttpStatusCode.OK)
-                {
-                    return StatusCode(500, new { message = $"Failed to upload image {image.FileName}" });
-                }
+                    throw new Exception($"Failed to upload image {image.FileName}");
 
-                var hotelImageRequest = new HotelImageRequest
+                return new HotelImageRequest
                 {
                     HotelId = id,
                     ImageUrl = uploadResult.SecureUrl.ToString(),
                     IsMain = false
                 };
+            });
 
-                uploadedImages.Add(hotelImageRequest);
+            List<HotelImageRequest> uploadedImages;
+            try
+            {
+                uploadedImages = (await Task.WhenAll(uploadTasks)).ToList();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
 
-            var response = await _hotelImageService.AdddHotelImagesAsync(id, uploadedImages);
-
+            var response = await _hotelImageService.AddHotelImagesAsync(id, uploadedImages);
             return response.Success ? Ok(response) : BadRequest(response.Message);
         }
         [HttpDelete("images/{imageId}")]

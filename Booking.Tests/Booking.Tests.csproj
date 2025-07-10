@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+	 <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+	  <PackageReference Include="xunit" Version="2.6.6" />
+	  <PackageReference Include="xunit.runner.visualstudio" Version="2.5.6" />
+	  <PackageReference Include="Moq" Version="4.20.70" />
+	  <PackageReference Include="AutoMapper" Version="14.0.0" />
+	  <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Booking.Repository\Booking.Repository.csproj" />
+    <ProjectReference Include="..\Booking.Service\Booking.Service.csproj" />
+  </ItemGroup>
+
+</Project>
