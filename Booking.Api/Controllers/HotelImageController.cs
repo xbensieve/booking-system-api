@@ -1,0 +1,140 @@
+﻿using Booking.Service.Interfaces;
+using Booking.Service.Models;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+
+// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+
+namespace Booking.Api.Controllers
+{
+    [Route("api")]
+    [ApiController]
+    public class HotelImageController : ControllerBase
+    {
+        private readonly Cloudinary _cloudinary;
+        private readonly IHotelImageService _hotelImageService;
+        public HotelImageController(Cloudinary cloudinary, IHotelImageService hotelImageService)
+        {
+            _cloudinary = cloudinary;
+            _hotelImageService = hotelImageService;
+        }
+
+        [HttpPost("hotels/{id}/images/upload")]
+        public async Task<IActionResult> Post(int id, [Required] List<IFormFile> images)
+        {
+            if (images == null || !images.Any())
+            {
+                return BadRequest(new { message = "No images provided" });
+            }
+
+            if (images.Count > 10)
+            {
+                return BadRequest(new { message = "Cannot upload more than 10 images at once" });
+            }
+
+            List<HotelImageRequest> uploadedImages = new List<HotelImageRequest>();
+
+            foreach (var image in images)
+            {
+                if (image.Length > 5 * 1024 * 1024)
+                {
+                    return BadRequest(new { message = $"Image {image.FileName} exceeds 5MB limit" });
+                }
+                if (!IsImageFile(image))
+                {
+                    return BadRequest(new { message = $"File {image.FileName} is not a valid image" });
+                }
+                using var stream = image.OpenReadStream();
+                var uploadParams = new ImageUploadParams
+                {
+                    File = new FileDescription(image.FileName, stream),
+                    Folder = $"hotels/{id}",
+                    PublicId = $"hotel_{id}_{Guid.NewGuid()}"
+                };
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                if (uploadResult.StatusCode != System.Net.HttpStatusCode.OK)
+                {
+                    return StatusCode(500, new { message = $"Failed to upload image {image.FileName}" });
+                }
+
+                var hotelImageRequest = new HotelImageRequest
+                {
+                    HotelId = id,
+                    ImageUrl = uploadResult.SecureUrl.ToString(),
+                    IsMain = false
+                };
+
+                uploadedImages.Add(hotelImageRequest);
+            }
+
+            var response = await _hotelImageService.AdddHotelImagesAsync(id, uploadedImages);
+
+            return response.Success ? Ok(response) : BadRequest(response.Message);
+        }
+        [HttpDelete("images/{imageId}")]
+        public async Task<IActionResult> DeleteImage(int imageId)
+        {
+            var image = await _hotelImageService.GetHotelImageByIdAsync(imageId);
+
+            if (image == null)
+            {
+                return NotFound(new { message = "Image not found" });
+            }
+
+            var publicId = ExtractPublicIdFromUrl(image.Data.ImageUrl);
+            if (string.IsNullOrEmpty(publicId))
+            {
+                return BadRequest(new { message = "Invalid image URL format" });
+            }
+
+            var deletionParams = new DeletionParams(publicId);
+            var deletionResult = await _cloudinary.DestroyAsync(deletionParams);
+
+            if (deletionResult.Result != "ok")
+            {
+                return StatusCode(500, new { message = "Failed to delete image from Cloudinary" });
+            }
+
+            var response = await _hotelImageService.DeleteHotelImageAsync(imageId);
+
+            return response.Success
+                ? Ok(response)
+                : BadRequest(response.Message);
+
+        }
+        private bool IsImageFile(IFormFile file)
+        {
+            var validExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            return validExtensions.Contains(extension);
+        }
+        private string ExtractPublicIdFromUrl(string imageUrl)
+        {
+            try
+            {
+                var uri = new Uri(imageUrl);
+                var segments = uri.Segments;
+
+                int versionIndex = Array.FindIndex(segments, s => s.StartsWith("v"));
+                if (versionIndex < 0 || versionIndex >= segments.Length - 1) return null;
+
+                var pathSegments = segments.Skip(versionIndex + 1).Take(segments.Length - versionIndex - 1).ToArray();
+                var fullPath = string.Join("", pathSegments).TrimEnd('/');
+
+                var publicIdWithExtension = pathSegments.Last().Split('?')[0];
+                var publicId = publicIdWithExtension.Contains('.')
+                    ? publicIdWithExtension.Substring(0, publicIdWithExtension.LastIndexOf('.'))
+                    : publicIdWithExtension;
+
+                return fullPath.Replace(publicIdWithExtension, publicId);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+    }
+}

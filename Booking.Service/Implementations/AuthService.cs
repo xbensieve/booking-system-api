@@ -31,10 +31,6 @@ namespace Booking.Service.Implementations
             if (model == null)
                 return ApiResponse<object>.Fail("Invalid user data.");
 
-            if (string.IsNullOrEmpty(model.Email)
-                || string.IsNullOrEmpty(model.FullName)
-                || string.IsNullOrEmpty(model.Uid))
-                return ApiResponse<object>.Fail("All fields required.");
 
             var user = new User
             {

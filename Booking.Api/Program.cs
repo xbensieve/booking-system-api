@@ -1,9 +1,11 @@
-using Booking.Api.Middleware;
 using Booking.Repository.ApplicationContext;
 using Booking.Repository.Implementations;
 using Booking.Repository.Interfaces;
+using Booking.Service.Config;
 using Booking.Service.Implementations;
 using Booking.Service.Interfaces;
+using Booking.Service.Mapping;
+using CloudinaryDotNet;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +18,9 @@ namespace Booking.Api
         {
             var builder = WebApplication.CreateBuilder(args);
             var config = builder.Configuration;
-
+            DotNetEnv.Env.Load();
+            builder.Configuration.AddEnvironmentVariables();
+            builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
             if (FirebaseApp.DefaultInstance == null)
             {
                 FirebaseApp.Create(new AppOptions
@@ -30,6 +34,9 @@ namespace Booking.Api
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IHotelService, HotelService>();
+            builder.Services.AddScoped<IHotelImageService, HotelImageService>();
+            builder.Services.AddAutoMapper(typeof(MappingProfile));
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", builder =>
@@ -43,6 +50,18 @@ namespace Booking.Api
                 {
                     options.SuppressModelStateInvalidFilter = true;
                 });
+            var cloudinarySettings = config.GetSection("Cloudinary").Get<CloudinarySettings>();
+            if (cloudinarySettings == null || string.IsNullOrEmpty(cloudinarySettings.CloudName) ||
+                string.IsNullOrEmpty(cloudinarySettings.ApiKey) || string.IsNullOrEmpty(cloudinarySettings.ApiSecret))
+            {
+                throw new InvalidOperationException("Cloudinary configuration is missing or invalid.");
+            }
+            var cloudinary = new Cloudinary(new Account(
+                cloudinarySettings.CloudName,
+                cloudinarySettings.ApiKey,
+                cloudinarySettings.ApiSecret
+            ));
+            builder.Services.AddSingleton(cloudinary);
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
@@ -95,8 +114,8 @@ namespace Booking.Api
 
             app.UseCors("AllowFrontend");
 
-            app.UseMiddleware<FirebaseAuthMiddleware>();
-            app.UseMiddleware<CsrfValidationMiddleware>();
+            //app.UseMiddleware<FirebaseAuthMiddleware>();
+            //app.UseMiddleware<CsrfValidationMiddleware>();
 
             app.UseAuthentication();
 
