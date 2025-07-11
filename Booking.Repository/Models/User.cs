@@ -36,5 +36,6 @@ namespace Booking.Repository.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         public virtual ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
+        public bool IsDeleted { get; set; } = false;
     }
 }

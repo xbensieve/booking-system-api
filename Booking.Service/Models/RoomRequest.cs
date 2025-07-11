@@ -2,17 +2,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Booking.Repository.Models
+namespace Booking.Service.Models
 {
-    public class Room
+    public class RoomRequest
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
-
-        [Required(ErrorMessage = "Hotel ID is required.")]
-        public int HotelId { get; set; }
-
         [Required(ErrorMessage = "Room number is required.")]
         [StringLength(50, ErrorMessage = "Room number cannot exceed 50 characters.")]
         public string RoomNumber { get; set; } = string.Empty;
@@ -31,19 +24,5 @@ namespace Booking.Repository.Models
 
         [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters.")]
         public string? Description { get; set; }
-
-        public bool IsAvailable { get; set; } = true;
-
-        [Required]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        [Required]
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-        [ForeignKey("HotelId")]
-        public virtual Hotel? Hotel { get; set; }
-        public virtual ICollection<RoomImage> Images { get; set; } = new List<RoomImage>();
-        public bool IsDeleted { get; set; } = false;
-
     }
 }

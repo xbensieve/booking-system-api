@@ -1,4 +1,6 @@
-﻿namespace Booking.Repository.Interfaces
+﻿using System.Linq.Expressions;
+
+namespace Booking.Repository.Interfaces
 {
     public interface IGenericRepository<T> where T : class
     {
@@ -8,5 +10,6 @@
         void Update(T entity);
         void Delete(T entity);
         IQueryable<T> Query();
+        Task<IEnumerable<T>> SearchAsync(Expression<Func<T, bool>> predicate);
     }
 }

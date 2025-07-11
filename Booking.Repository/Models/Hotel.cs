@@ -36,7 +36,7 @@ namespace Booking.Repository.Models
 
         [Required]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
+        public bool IsDeleted { get; set; } = false;
         public virtual ICollection<Room> Rooms { get; set; } = new List<Room>();
 
         public virtual ICollection<HotelImage> Images { get; set; } = new List<HotelImage>();

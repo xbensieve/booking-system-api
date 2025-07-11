@@ -3,38 +3,32 @@ using Booking.Service.Models;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Booking.Api.Controllers
 {
-    [Route("api")]
+    [Route("api/rooms")]
     [ApiController]
-    public class HotelImageController : ControllerBase
+    public class RoomImageController : ControllerBase
     {
         private readonly Cloudinary _cloudinary;
-        private readonly IHotelImageService _hotelImageService;
-        public HotelImageController(Cloudinary cloudinary, IHotelImageService hotelImageService)
+        private readonly IRoomImageService _roomImageService;
+        public RoomImageController(Cloudinary cloudinary, IRoomImageService roomImageService)
         {
-            _cloudinary = cloudinary;
-            _hotelImageService = hotelImageService;
+            _cloudinary = cloudinary ?? throw new ArgumentNullException(nameof(cloudinary));
+            _roomImageService = roomImageService ?? throw new ArgumentNullException(nameof(roomImageService));
         }
-
-        [HttpPost("hotels/{id}/images/upload")]
-        public async Task<IActionResult> Post(int id, [Required] List<IFormFile> images)
+        [HttpPost("{roomId}/images/upload")]
+        public async Task<IActionResult> UploadImages(int roomId, [FromForm] List<IFormFile> images)
         {
             if (images == null || !images.Any())
             {
                 return BadRequest(new { message = "No images provided" });
             }
-
             if (images.Count > 10)
             {
                 return BadRequest(new { message = "Cannot upload more than 10 images at once" });
             }
-
             var uploadTasks = images.Select(async image =>
             {
                 if (image.Length > 5 * 1024 * 1024) throw new ArgumentException($"Image {image.FileName} exceeds 5MB limit");
@@ -44,22 +38,22 @@ namespace Booking.Api.Controllers
                 var uploadParams = new ImageUploadParams
                 {
                     File = new FileDescription(image.FileName, stream),
-                    Folder = $"hotels/{id}",
-                    PublicId = $"hotel_{id}_{Guid.NewGuid()}"
+                    Folder = $"rooms/{roomId}",
+                    PublicId = $"rooms_{roomId}_{Guid.NewGuid()}"
                 };
                 var uploadResult = await _cloudinary.UploadAsync(uploadParams);
                 if (uploadResult.StatusCode != System.Net.HttpStatusCode.OK)
                     throw new Exception($"Failed to upload image {image.FileName}");
 
-                return new HotelImageRequest
+                return new RoomImageRequest
                 {
-                    HotelId = id,
+                    RoomId = roomId,
                     ImageUrl = uploadResult.SecureUrl.ToString(),
                     IsMain = false
                 };
             });
 
-            List<HotelImageRequest> uploadedImages;
+            List<RoomImageRequest> uploadedImages;
             try
             {
                 uploadedImages = (await Task.WhenAll(uploadTasks)).ToList();
@@ -69,39 +63,8 @@ namespace Booking.Api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
 
-            var response = await _hotelImageService.AddHotelImagesAsync(id, uploadedImages);
+            var response = await _roomImageService.AddRoomImagesAsync(roomId, uploadedImages);
             return response.Success ? Ok(response) : BadRequest(response.Message);
-        }
-        [HttpDelete("hotels/images/{imageId}")]
-        public async Task<IActionResult> DeleteImage(int imageId)
-        {
-            var image = await _hotelImageService.GetHotelImageByIdAsync(imageId);
-
-            if (image == null)
-            {
-                return NotFound(new { message = "Image not found" });
-            }
-
-            var publicId = ExtractPublicIdFromUrl(image.Data.ImageUrl);
-            if (string.IsNullOrEmpty(publicId))
-            {
-                return BadRequest(new { message = "Invalid image URL format" });
-            }
-
-            var deletionParams = new DeletionParams(publicId);
-            var deletionResult = await _cloudinary.DestroyAsync(deletionParams);
-
-            if (deletionResult.Result != "ok")
-            {
-                return StatusCode(500, new { message = "Failed to delete image from Cloudinary" });
-            }
-
-            var response = await _hotelImageService.DeleteHotelImageAsync(imageId);
-
-            return response.Success
-                ? Ok(response)
-                : BadRequest(response.Message);
-
         }
         private bool IsImageFile(IFormFile file)
         {
@@ -134,47 +97,69 @@ namespace Booking.Api.Controllers
                 return null;
             }
         }
-
-        [HttpGet("hotels/images/{imageId}")]
+        [HttpGet("images/{imageId}")]
         public async Task<IActionResult> GetImageById(int imageId)
         {
-            var response = await _hotelImageService.GetHotelImageByIdAsync(imageId);
-            if (response.Success)
-            {
-                return Ok(response);
-            }
-            return NotFound(new { message = response.Message });
+            var response = await _roomImageService.GetRoomImageByIdAsync(imageId);
+
+            return response.Success
+                ? Ok(response)
+                : NotFound(response.Message);
         }
-        [HttpPut("hotels/images/{imageId}/upload")]
+        [HttpPut("images/{imageId}/upload")]
         public async Task<IActionResult> UpdateImageFile(int imageId, [Required] IFormFile image, [FromQuery] bool? isMain = null)
         {
             if (image == null || image.Length == 0)
                 return BadRequest(new { message = "No image provided" });
-
             if (image.Length > 5 * 1024 * 1024)
                 return BadRequest(new { message = "Image exceeds 5MB limit" });
-
             if (!IsImageFile(image))
                 return BadRequest(new { message = "File is not a valid image" });
-
             string newImageUrl;
             using (var stream = image.OpenReadStream())
             {
                 var uploadParams = new ImageUploadParams
                 {
                     File = new FileDescription(image.FileName, stream),
-                    Folder = $"hotels/{imageId}",
-                    PublicId = $"hotel_image_{imageId}_{Guid.NewGuid()}"
+                    Folder = $"rooms/{imageId}",
+                    PublicId = $"room_image_{imageId}_{Guid.NewGuid()}"
                 };
                 var uploadResult = await _cloudinary.UploadAsync(uploadParams);
                 if (uploadResult.StatusCode != System.Net.HttpStatusCode.OK)
-                    return StatusCode(500, new { message = $"Failed to upload image {image.FileName}" });
-
+                    return BadRequest(new { message = "Failed to upload image" });
                 newImageUrl = uploadResult.SecureUrl.ToString();
             }
-
-            var response = await _hotelImageService.UpdateHotelImageFileAsync(imageId, newImageUrl, isMain);
+            var response = await _roomImageService.UpdateRoomImageFileAsync(imageId, newImageUrl, isMain);
             return response.Success ? Ok(response) : BadRequest(response.Message);
+        }
+        [HttpDelete("images/{imageId}")]
+        public async Task<IActionResult> DeleteImage(int imageId)
+        {
+            var image = await _roomImageService.GetRoomImageByIdAsync(imageId);
+
+            if (image == null)
+            {
+                return NotFound(new { message = "Image not found" });
+            }
+
+            var publicId = ExtractPublicIdFromUrl(image.Data.ImageUrl);
+            if (string.IsNullOrEmpty(publicId))
+            {
+                return BadRequest(new { message = "Invalid image URL format" });
+            }
+
+            var deletionParams = new DeletionParams(publicId);
+            var deletionResult = await _cloudinary.DestroyAsync(deletionParams);
+
+            if (deletionResult.Result != "ok")
+            {
+                return StatusCode(500, new { message = "Failed to delete image from Cloudinary" });
+            }
+
+            var response = await _roomImageService.DeleteRoomImageAsync(imageId);
+            return response.Success
+                ? Ok(response)
+                : BadRequest(response.Message);
         }
     }
 }

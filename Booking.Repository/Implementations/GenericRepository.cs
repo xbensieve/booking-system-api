@@ -1,6 +1,7 @@
 ﻿using Booking.Repository.ApplicationContext;
 using Booking.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Booking.Repository.Implementations
 {
@@ -19,5 +20,9 @@ namespace Booking.Repository.Implementations
         public void Update(T entity) => _dbSet.Update(entity);
         public void Delete(T entity) => _dbSet.Remove(entity);
         public IQueryable<T> Query() => _dbSet.AsQueryable();
+        public async Task<IEnumerable<T>> SearchAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _context.Set<T>().Where(predicate).ToListAsync();
+        }
     }
 }

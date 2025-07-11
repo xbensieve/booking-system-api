@@ -45,5 +45,6 @@ namespace Booking.Repository.Models
 
         [ForeignKey("RoomId")]
         public virtual Room? Room { get; set; }
+        public bool IsDeleted { get; set; } = false;
     }
 }
