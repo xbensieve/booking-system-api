@@ -1,43 +1,80 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Booking.Service.Interfaces;
+using Booking.Service.Models;
+using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Booking.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/rooms")]
     [ApiController]
     public class RoomController : ControllerBase
     {
-        // GET: api/<RoomController>
-        [HttpGet]
-        public IEnumerable<string> Get()
+        private readonly IRoomService _roomService;
+        public RoomController(IRoomService roomService)
         {
-            return new string[] { "value1", "value2" };
+            _roomService = roomService ?? throw new ArgumentNullException(nameof(roomService));
         }
 
-        // GET api/<RoomController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
+        [HttpPost("{hotelId}")]
+        public async Task<IActionResult> Post(int hotelId, [FromBody] RoomRequest request)
         {
-            return "value";
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var response = await _roomService.AddRoomAsync(hotelId, request);
+            return response.Success
+                ? Ok(response)
+                : BadRequest(response.Message);
         }
-
-        // POST api/<RoomController>
-        [HttpPost]
-        public void Post([FromBody] string value)
+        [HttpPut("{roomId}")]
+        public async Task<IActionResult> Put(int roomId, [FromBody] RoomRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var response = await _roomService.UpdateRoomAsync(roomId, request);
+            return response.Success
+                ? Ok(response)
+                : BadRequest(response.Message);
         }
-
-        // PUT api/<RoomController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        [HttpDelete("{roomId}")]
+        public async Task<IActionResult> Delete(int roomId)
         {
+            var response = await _roomService.DeleteRoomAsync(roomId);
+            return response.Success
+                ? Ok(response)
+                : BadRequest(response.Message);
         }
-
-        // DELETE api/<RoomController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
+        [HttpGet("hotel/{hotelId}")]
+        public async Task<IActionResult> GetByHotelId(int hotelId, int page = 1, int pageSize = 10)
         {
+            var response = await _roomService.GetRoomsByHotelIdAsync(hotelId, page, pageSize);
+            return response.Success
+                ? Ok(response)
+                : NotFound(response.Message);
+        }
+        [HttpGet("{roomId}")]
+        public async Task<IActionResult> GetById(int roomId)
+        {
+            var response = await _roomService.GetRoomByIdAsync(roomId);
+            return response.Success
+                ? Ok(response)
+                : NotFound(response.Message);
+        }
+        [HttpPost("search")]
+        public async Task<IActionResult> Search([FromBody] RoomSearchRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var response = await _roomService.SearchRoomsAsync(request);
+            return response.Success
+                ? Ok(response)
+                : BadRequest(response.Message);
         }
     }
 }

@@ -9,12 +9,10 @@ namespace Booking.Service.Implementations
     public class HotelImageService : IHotelImageService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IHotelService _hotelService;
         private readonly IMapper _mapper;
         public HotelImageService(IUnitOfWork unitOfWork, IHotelService hotelService, IMapper mapper)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-            _hotelService = hotelService;
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
@@ -96,6 +94,30 @@ namespace Booking.Service.Implementations
             return imageDto != null
                 ? ApiResponse<HotelImageResponse>.Ok(imageDto, "Image retrieved successfully.")
                 : ApiResponse<HotelImageResponse>.Fail("Image not found.");
+        }
+
+        public async Task<ApiResponse<object>> UpdateHotelImageFileAsync(int imageId, string newImageUrl, bool? isMain = null)
+        {
+            var image = await _unitOfWork.HotelImages.GetByIdAsync(imageId);
+            if (image == null)
+                return ApiResponse<object>.Fail("Hotel image not found.");
+
+            image.ImageUrl = newImageUrl;
+            if (isMain.HasValue)
+                image.IsMain = isMain.Value;
+
+            try
+            {
+                _unitOfWork.HotelImages.Update(image);
+                int result = await _unitOfWork.SaveChangesAsync();
+                return result > 0
+                    ? ApiResponse<object>.Ok(new { imageId = image.Id, imageUrl = image.ImageUrl }, "Hotel image updated successfully.")
+                    : ApiResponse<object>.Fail("Failed to update hotel image.");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<object>.Fail("An error occurred while updating the hotel image.", ex.Message);
+            }
         }
     }
 }

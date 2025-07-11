@@ -32,5 +32,6 @@ namespace Booking.Repository.Models
 
         [ForeignKey("ReservationId")]
         public virtual Reservation? Reservation { get; set; }
+        public bool IsDeleted { get; set; } = false;
     }
 }
