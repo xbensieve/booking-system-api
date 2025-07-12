@@ -69,6 +69,14 @@ namespace Booking.Api.Controllers
                 Expires = expires
             });
 
+            Response.Cookies.Append("X-CSRF-EXPIRES", expires.ToString("O"), new CookieOptions
+            {
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = expires
+            });
+
             return Ok(new { message = "Login success" });
         }
 

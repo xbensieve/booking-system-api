@@ -1,12 +1,14 @@
 ﻿using Booking.Repository.ApplicationContext;
 using Booking.Repository.Interfaces;
 using Booking.Repository.Models;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Booking.Repository.Implementations
 {
     public class UnitOfWork : IUnitOfWork
     {
         private readonly AppDbContext _context;
+        private IDbContextTransaction _transaction;
         public IGenericRepository<User> Users { get; }
         public IGenericRepository<Reservation> Reservations { get; }
         public IGenericRepository<Hotel> Hotels { get; }
@@ -34,6 +36,22 @@ namespace Booking.Repository.Implementations
         public void Dispose()
         {
             _context.Dispose();
+        }
+
+        public async Task BeginTransactionAsync()
+        {
+            _transaction = await _context.Database.BeginTransactionAsync();
+        }
+
+        public async Task CommitTransactionAsync()
+        {
+            await _context.SaveChangesAsync();
+            await _transaction?.CommitAsync();
+        }
+
+        public async Task RollbackTransactionAsync()
+        {
+            await _transaction?.RollbackAsync();
         }
     }
 }

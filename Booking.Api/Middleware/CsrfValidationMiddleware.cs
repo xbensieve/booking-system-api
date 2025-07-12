@@ -20,12 +20,19 @@
             }
 
             var csrfCookie = context.Request.Cookies["X-CSRF-TOKEN"];
-            var csrfHeader = context.Request.Headers["X-CSRF-TOKEN"].FirstOrDefault();
+            var expiresCookie = context.Request.Cookies["X-CSRF-EXPIRES"];
 
-            if (string.IsNullOrEmpty(csrfCookie) || csrfCookie != csrfHeader)
+            if (string.IsNullOrEmpty(csrfCookie))
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 await context.Response.WriteAsync("CSRF token mismatch");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(expiresCookie) || !DateTime.TryParse(expiresCookie, out var expires) || expires < DateTime.UtcNow)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsync("CSRF token expired");
                 return;
             }
 

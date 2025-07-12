@@ -1,3 +1,4 @@
+using Booking.Api.Middleware;
 using Booking.Repository.ApplicationContext;
 using Booking.Repository.Implementations;
 using Booking.Repository.Interfaces;
@@ -38,6 +39,8 @@ namespace Booking.Api
             builder.Services.AddScoped<IHotelImageService, HotelImageService>();
             builder.Services.AddScoped<IRoomService, RoomService>();
             builder.Services.AddScoped<IRoomImageService, RoomImageService>();
+            builder.Services.AddScoped<IReservationService, ReservationService>();
+            builder.Services.AddScoped<IPaymentService, VnPayService>();
             builder.Services.AddAutoMapper(typeof(MappingProfile));
             builder.Services.AddCors(options =>
             {
@@ -116,8 +119,8 @@ namespace Booking.Api
 
             app.UseCors("AllowFrontend");
 
-            //app.UseMiddleware<FirebaseAuthMiddleware>();
-            //app.UseMiddleware<CsrfValidationMiddleware>();
+            app.UseMiddleware<FirebaseAuthMiddleware>();
+            app.UseMiddleware<CsrfValidationMiddleware>();
 
             app.UseAuthentication();
 

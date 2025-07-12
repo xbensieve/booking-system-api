@@ -33,6 +33,9 @@ namespace Booking.Repository.Models
 
         public DateTime? CheckInTime { get; set; }
         public DateTime? CheckOutTime { get; set; }
+        [StringLength(1000, ErrorMessage = "Note cannot exceed 1000 characters.")]
+        public string? Note { get; set; }
+        public int NumberOfGuests { get; set; } = 1;
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

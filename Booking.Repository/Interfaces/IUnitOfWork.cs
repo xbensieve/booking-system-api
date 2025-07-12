@@ -12,6 +12,9 @@ namespace Booking.Repository.Interfaces
         IGenericRepository<RoomImage> RoomImages { get; }
         IGenericRepository<Review> Reviews { get; }
         IGenericRepository<Payment> Payments { get; }
+        Task BeginTransactionAsync();
+        Task CommitTransactionAsync();
+        Task RollbackTransactionAsync();
         Task<int> SaveChangesAsync();
     }
 }
