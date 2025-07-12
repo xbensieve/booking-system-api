@@ -11,5 +11,6 @@ namespace Booking.Repository.Interfaces
         void Delete(T entity);
         IQueryable<T> Query();
         Task<IEnumerable<T>> SearchAsync(Expression<Func<T, bool>> predicate);
+        Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate);
     }
 }

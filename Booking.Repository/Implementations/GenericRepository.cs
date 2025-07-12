@@ -24,5 +24,6 @@ namespace Booking.Repository.Implementations
         {
             return await _context.Set<T>().Where(predicate).ToListAsync();
         }
+        public Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate) => _context.Set<T>().AnyAsync(predicate);
     }
 }

@@ -1,43 +1,62 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Booking.Service.Interfaces;
+using Booking.Service.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Booking.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/reservations")]
     [ApiController]
     public class ReservationController : ControllerBase
     {
-        // GET: api/<ReservationController>
-        [HttpGet]
-        public IEnumerable<string> Get()
+        private readonly IReservationService _reservationService;
+        public ReservationController(IReservationService reservationService)
         {
-            return new string[] { "value1", "value2" };
+            _reservationService = reservationService ?? throw new ArgumentNullException(nameof(reservationService));
         }
-
-        // GET api/<ReservationController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
-        {
-            return "value";
-        }
-
-        // POST api/<ReservationController>
+        [Authorize]
         [HttpPost]
-        public void Post([FromBody] string value)
+        public async Task<IActionResult> CreateReservationAsync([FromBody] ReservationRequest request)
         {
-        }
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        // PUT api/<ReservationController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
+            if (userId == null)
+            {
+                return Unauthorized("User is not authenticated.");
+            }
 
-        // DELETE api/<ReservationController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+
+            var response = await _reservationService.CreateReservationAsync(userId, request);
+            return response.Success
+                 ? Ok(response)
+                 : BadRequest(response.Message);
+        }
+        [HttpGet("{reservationId}")]
+        public async Task<IActionResult> GetReservationByIdAsync(int reservationId)
         {
+            var response = await _reservationService.GetReservationByIdAsync(reservationId);
+            return response.Success
+                 ? Ok(response)
+                 : NotFound(response.Message);
+        }
+        [HttpGet("users/{userId}")]
+        public async Task<IActionResult> GetReservationsByUserIdAsync(string userId, int page = 1, int pageSize = 10)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest("User ID is required.");
+            }
+            var response = await _reservationService.GetReservationsByUserIdAsync(userId, page, pageSize);
+            return response.Success
+                 ? Ok(response)
+                 : NotFound(response.Message);
         }
     }
 }
