@@ -29,9 +29,10 @@ namespace Booking.Api
                     Credential = GoogleCredential.FromFile(Path.Combine(builder.Environment.ContentRootPath, "firebase-adminsdk.json"))
                 });
             }
-            builder.Services.AddMemoryCache();
+
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
+
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             builder.Services.AddScoped<IAuthService, AuthService>();
@@ -41,7 +42,15 @@ namespace Booking.Api
             builder.Services.AddScoped<IRoomImageService, RoomImageService>();
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<IPaymentService, VnPayService>();
+            builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+            builder.Services.AddHostedService<BackgroundWorker>();
             builder.Services.AddAutoMapper(typeof(MappingProfile));
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddMemoryCache();
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
+            builder.Logging.AddDebug();
+
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", builder =>

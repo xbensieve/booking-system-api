@@ -98,7 +98,6 @@ namespace VNPAY
                     data.Append(WebUtility.UrlEncode(kv.Key) + "=" + WebUtility.UrlEncode(kv.Value) + "&");
                 }
             }
-            //remove last '&'
             if (data.Length > 0)
             {
                 data.Remove(data.Length - 1, 1);
