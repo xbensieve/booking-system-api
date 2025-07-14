@@ -4,6 +4,7 @@ using Booking.Repository.Interfaces;
 using Booking.Repository.Models;
 using Booking.Service.Interfaces;
 using Booking.Service.Models;
+using Booking.Service.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace Booking.Service.Implementations
@@ -90,9 +91,44 @@ namespace Booking.Service.Implementations
                 return ApiResponse<object>.Fail($"An error occurred while creating the reservation: {ex.Message}");
             }
         }
-        public Task CancelReservationAsync(int reservationId)
+        public async Task<ApiResponse<object>> CancelReservationAsync(int reservationId)
         {
-            throw new NotImplementedException();
+            var reservation = await _unitOfWork.Reservations.Query()
+                .Include(r => r.Room)
+                .Where(r => r.Id == reservationId && !r.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            if (reservation == null)
+            {
+                return ApiResponse<object>.Fail("Reservation not found.");
+            }
+            if (reservation.Status == BookingStatus.Cancelled)
+            {
+                return ApiResponse<object>.Fail("Reservation is already cancelled.");
+            }
+            reservation.Status = BookingStatus.Cancelled;
+            reservation.Room.IsAvailable = true;
+            reservation.UpdatedAt = DateTime.UtcNow;
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                int result = await _unitOfWork.SaveChangesAsync();
+                if (result > 0)
+                {
+                    await _unitOfWork.CommitTransactionAsync();
+                    return ApiResponse<object>.Ok(new { reservationId }, "Reservation cancelled successfully.");
+                }
+                else
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResponse<object>.Fail("Failed to cancel reservation.");
+                }
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ApiResponse<object>.Fail($"An error occurred while cancelling the reservation: {ex.Message}");
+            }
         }
         private decimal CalculateTotalPrice(DateTime checkIn, DateTime checkOut, decimal pricePerNight)
         {
@@ -141,6 +177,122 @@ namespace Booking.Service.Implementations
             }
             var response = _mapper.Map<List<ReservationResponse>>(reservations);
             return ApiResponse<List<ReservationResponse>>.Ok(response, "Reservations retrieved successfully.");
+        }
+
+        public async Task<ApiResponse<object>> CheckInReservationAsync(int reservationId, DateTime checkInTime)
+        {
+            var reservation = await _unitOfWork.Reservations.GetByIdAsync(reservationId);
+            if (reservation == null)
+            {
+                return ApiResponse<object>.Fail("Reservation not found.");
+            }
+            if (reservation.Status != BookingStatus.Confirmed)
+            {
+                return ApiResponse<object>.Fail("Reservation is not in a valid state for check-in.");
+            }
+
+            var currentTime = DateTime.UtcNow;
+            var maxCheckInTime = reservation.CheckInDate.AddHours(24);
+            // Check if the check-in time is within the allowed range
+            if (currentTime > maxCheckInTime)
+            {
+                return ApiResponse<object>.Fail("Check-in time has expired. Please contact support.");
+            }
+            // Check if the check-in time is before the reservation's check-in date
+            double earlyCheckInHours = (reservation.CheckInDate - checkInTime).TotalHours;
+            string message = $"{(earlyCheckInHours > 0 ? $"Early check-in by {earlyCheckInHours:F2} hours" : "On-time check-in")}";
+
+            reservation.Status = BookingStatus.CheckedIn;
+            reservation.CheckInTime = checkInTime;
+            reservation.Note = message;
+            reservation.UpdatedAt = DateTime.UtcNow;
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                int result = await _unitOfWork.SaveChangesAsync();
+                if (result > 0)
+                {
+                    await _unitOfWork.CommitTransactionAsync();
+                    return ApiResponse<object>.Ok(new { reservationId }, "Check-in successful.");
+                }
+                else
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResponse<object>.Fail("Failed to check-in reservation.");
+                }
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ApiResponse<object>.Fail($"An error occurred while checking in: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<object>> CheckOutReservationAsync(int reservationId, DateTime checkOutTime)
+        {
+            var reservation = await _unitOfWork.Reservations.Query()
+                .Include(r => r.Room)
+                .Where(r => r.Id == reservationId && r.Status == BookingStatus.CheckedIn)
+                .FirstOrDefaultAsync();
+
+            if (reservation == null)
+            {
+                return ApiResponse<object>.Fail("Reservation not found.");
+            }
+
+            if (reservation.Status != BookingStatus.CheckedIn)
+            {
+                return ApiResponse<object>.Fail("Reservation is not in a valid state for check-out.");
+            }
+            if (!reservation.CheckInTime.HasValue)
+            {
+                return ApiResponse<object>.Fail("Check-in/check-out time is missing and required for surcharge calculation.");
+            }
+
+            double lateCheckOutHours = (checkOutTime - reservation.CheckOutDate).TotalHours;
+            string message = $"{(lateCheckOutHours > 0 ? $"Late check-out by {lateCheckOutHours:F2} hours" : "On-time check-out")}";
+            var pricingCalculator = new PricingCalculator();
+            var surcharge = pricingCalculator.CalculateDetailedRoomPrice(
+                reservation.CheckInTime.Value,
+                reservation.CheckInDate,
+                checkOutTime,
+                reservation.CheckOutDate,
+                reservation.Room.PricePerNight);
+
+            if (surcharge == null)
+            {
+                return ApiResponse<object>.Fail("Failed to calculate surcharges for check-out.");
+            }
+
+            reservation.Status = BookingStatus.CheckedOut;
+            reservation.CheckOutTime = checkOutTime;
+            reservation.Note += "\n" + message;
+            reservation.UpdatedAt = DateTime.UtcNow;
+            reservation.EarlyCheckInSurcharge = surcharge.EarlyCheckInFee;
+            reservation.LateCheckOutSurcharge = surcharge.LateCheckOutFee;
+            reservation.ActualPrice = surcharge.Total;
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                int result = await _unitOfWork.SaveChangesAsync();
+                if (result > 0)
+                {
+                    await _unitOfWork.CommitTransactionAsync();
+                    return ApiResponse<object>.Ok(new { reservationId }, "Check-out successful.");
+                }
+                else
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResponse<object>.Fail("Failed to check-out reservation.");
+                }
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ApiResponse<object>.Fail($"An error occurred while checking out: {ex.Message}");
+            }
         }
     }
 }

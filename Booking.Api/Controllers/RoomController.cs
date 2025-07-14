@@ -1,5 +1,6 @@
 ﻿using Booking.Service.Interfaces;
 using Booking.Service.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -15,7 +16,7 @@ namespace Booking.Api.Controllers
         {
             _roomService = roomService ?? throw new ArgumentNullException(nameof(roomService));
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpPost("{hotelId}")]
         public async Task<IActionResult> Post(int hotelId, [FromBody] RoomRequest request)
         {
@@ -28,6 +29,7 @@ namespace Booking.Api.Controllers
                 ? Ok(response)
                 : BadRequest(response.Message);
         }
+        [Authorize(Roles = "Admin")]
         [HttpPut("{roomId}")]
         public async Task<IActionResult> Put(int roomId, [FromBody] RoomRequest request)
         {
@@ -40,6 +42,7 @@ namespace Booking.Api.Controllers
                 ? Ok(response)
                 : BadRequest(response.Message);
         }
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{roomId}")]
         public async Task<IActionResult> Delete(int roomId)
         {
@@ -64,6 +67,7 @@ namespace Booking.Api.Controllers
                 ? Ok(response)
                 : NotFound(response.Message);
         }
+        [Authorize(Roles = "Admin")]
         [HttpPost("search")]
         public async Task<IActionResult> Search([FromBody] RoomSearchRequest request)
         {

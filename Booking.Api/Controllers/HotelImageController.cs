@@ -2,6 +2,7 @@
 using Booking.Service.Models;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
@@ -10,6 +11,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Booking.Api.Controllers
 {
+    [Authorize(Roles = "Admin")]
     [Route("api")]
     [ApiController]
     public class HotelImageController : ControllerBase

@@ -11,9 +11,11 @@ namespace Booking.Api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
-        public AuthController(IAuthService authService)
+        private readonly IConfiguration _configuration;
+        public AuthController(IAuthService authService, IConfiguration configuration)
         {
             _authService = authService;
+            _configuration = configuration;
         }
 
         [HttpPost("login")]
@@ -49,6 +51,19 @@ namespace Booking.Api.Controllers
                 }
             }
 
+            var email = decodedToken.Claims.TryGetValue("email", out var emailObj) ? emailObj?.ToString() : null;
+            var adminEmails = _configuration.GetSection("Admins").Get<List<string>>();
+            if (email != null && adminEmails.Contains(email))
+            {
+                await FirebaseAuth.DefaultInstance.SetCustomUserClaimsAsync(uid, new Dictionary<string, object>
+                {
+                    { "role", "Admin" }
+                });
+            }
+            var updatedUser = await FirebaseAuth.DefaultInstance.GetUserAsync(uid);
+            var claims = updatedUser.CustomClaims ?? new Dictionary<string, object>();
+
+
             var expires = DateTime.UtcNow.AddMinutes(55);
 
             Response.Cookies.Append("idToken", request.IdToken, new CookieOptions
@@ -77,7 +92,11 @@ namespace Booking.Api.Controllers
                 Expires = expires
             });
 
-            return Ok(new { message = "Login success" });
+            return Ok(new
+            {
+                message = "Login success",
+                claims
+            });
         }
 
 
