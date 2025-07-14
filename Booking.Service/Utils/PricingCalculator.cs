@@ -16,25 +16,28 @@ namespace Booking.Service.Utils
             result.Nights = (expectedCheckOut.Date - expectedCheckIn.Date).Days;
             result.BasePrice = baseRatePerNight * result.Nights;
 
-            if (actualCheckIn.Date == expectedCheckIn.Date && actualCheckIn.TimeOfDay < expectedCheckIn.TimeOfDay)
+            if (actualCheckIn < expectedCheckIn)
             {
-                var hour = actualCheckIn.TimeOfDay.Hours;
-                if (hour >= 5 && hour < 9)
+                var hoursEarly = (expectedCheckIn - actualCheckIn).TotalHours;
+
+                if (hoursEarly >= 5 && hoursEarly <= 9)
                     result.EarlyCheckInFee = baseRatePerNight * 0.5m;
-                else if (hour >= 9 && hour < 14)
+                else if (hoursEarly >= 1 && hoursEarly < 5)
                     result.EarlyCheckInFee = baseRatePerNight * 0.3m;
             }
 
-            if (actualCheckOut.Date == expectedCheckOut.Date && actualCheckOut.TimeOfDay > expectedCheckOut.TimeOfDay)
+            if (actualCheckOut > expectedCheckOut)
             {
-                var hour = actualCheckOut.TimeOfDay.Hours;
-                if (hour >= 11 && hour < 15)
+                var hoursLate = (actualCheckOut - expectedCheckOut).TotalHours;
+
+                if (hoursLate >= 0 && hoursLate < 4)
                     result.LateCheckOutFee = baseRatePerNight * 0.3m;
-                else if (hour >= 15 && hour < 18)
+                else if (hoursLate >= 4 && hoursLate < 7)
                     result.LateCheckOutFee = baseRatePerNight * 0.5m;
-                else if (hour >= 18)
+                else if (hoursLate >= 7)
                     result.LateCheckOutFee = baseRatePerNight * 1.0m;
             }
+
 
             return result;
         }

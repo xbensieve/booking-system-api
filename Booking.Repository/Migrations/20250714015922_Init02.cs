@@ -10,19 +10,19 @@ namespace Booking.Repository.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "ImageUrl",
-                table: "Rooms");
+            migrationBuilder.AddColumn<decimal>(
+                name: "ActualPrice",
+                table: "Reservations",
+                type: "decimal(18,2)",
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "ImageUrl",
-                table: "Rooms",
-                type: "nvarchar(max)",
-                nullable: true);
+            migrationBuilder.DropColumn(
+                name: "ActualPrice",
+                table: "Reservations");
         }
     }
 }

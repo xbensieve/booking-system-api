@@ -42,6 +42,7 @@ namespace Booking.Api
             builder.Services.AddScoped<IRoomImageService, RoomImageService>();
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<IPaymentService, VnPayService>();
+            builder.Services.AddScoped<IAdminService, AdminService>();
             builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             builder.Services.AddHostedService<BackgroundWorker>();
             builder.Services.AddAutoMapper(typeof(MappingProfile));

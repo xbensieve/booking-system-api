@@ -8,27 +8,22 @@ namespace Booking.Api.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly IMemoryCache _cache;
-
-        public FirebaseAuthMiddleware(RequestDelegate next, IMemoryCache cache)
+        private readonly IConfiguration _configuration;
+        public FirebaseAuthMiddleware(RequestDelegate next, IMemoryCache cache, IConfiguration configuration)
         {
             _next = next;
             _cache = cache;
+            _configuration = configuration;
         }
 
         public async Task InvokeAsync(HttpContext context)
         {
-            var path = context.Request.Path.Value?.ToLower();
-
-            if (path != null && (
-                path.StartsWith("/api/auth/login") ||
-                path.StartsWith("/api/auth/register") ||
-                path.StartsWith("/api/auth/refresh-token") ||
-                path.StartsWith("/api/auth/logout")
-            ))
+            if (MiddlewareHelper.IsPublicRoute(context))
             {
                 await _next(context);
                 return;
             }
+
             var idToken = context.Request.Cookies["idToken"];
 
             if (string.IsNullOrEmpty(idToken))
@@ -58,13 +53,16 @@ namespace Booking.Api.Middleware
                 var uid = decodedToken.Uid ?? string.Empty;
                 var email = decodedToken.Claims.TryGetValue("email", out var emailVal) ? emailVal?.ToString() : null;
                 var name = decodedToken.Claims.TryGetValue("name", out var nameVal) ? nameVal?.ToString() : null;
-
+                var adminEmails = _configuration.GetSection("Admins").Get<List<string>>();
                 var claims = new List<Claim>
                         {
                             new Claim(ClaimTypes.NameIdentifier, uid),
                             new Claim(ClaimTypes.Email, email ?? ""),
                         };
-
+                if (adminEmails != null && adminEmails.Contains(email))
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+                }
                 if (!string.IsNullOrEmpty(name))
                     claims.Add(new Claim("firebase:name", name));
 

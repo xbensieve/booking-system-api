@@ -9,11 +9,9 @@
         }
         public async Task InvokeAsync(HttpContext context)
         {
-            var method = context.Request.Method;
             var path = context.Request.Path.Value?.ToLower();
 
-            if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method) ||
-            (path != null && path.StartsWith("/api/auth")))
+            if (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method) || MiddlewareHelper.IsPublicRoute(context))
             {
                 await _next(context);
                 return;

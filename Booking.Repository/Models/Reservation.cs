@@ -36,16 +36,22 @@ namespace Booking.Repository.Models
         [StringLength(1000, ErrorMessage = "Note cannot exceed 1000 characters.")]
         public string? Note { get; set; }
         public int NumberOfGuests { get; set; } = 1;
+        [Range(0, 20, ErrorMessage = "Number of children must be between 0 and 20.")]
+        public int NumberOfChildren { get; set; } = 0;
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? EarlyCheckInSurcharge { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? LateCheckOutSurcharge { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? ActualPrice { get; set; }
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         [Required]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
         [ForeignKey("UserUid")]
         public virtual User? User { get; set; }
-
         [ForeignKey("RoomId")]
         public virtual Room? Room { get; set; }
         public bool IsDeleted { get; set; } = false;

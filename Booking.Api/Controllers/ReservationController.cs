@@ -58,5 +58,37 @@ namespace Booking.Api.Controllers
                  ? Ok(response)
                  : NotFound(response.Message);
         }
+        [HttpDelete("{reservationId}")]
+        public async Task<IActionResult> CancelReservationAsync(int reservationId)
+        {
+            var response = await _reservationService.CancelReservationAsync(reservationId);
+            return response.Success
+                 ? Ok(response)
+                 : NotFound(response.Message);
+        }
+        [HttpPost("{reservationId}/check-in")]
+        public async Task<IActionResult> CheckInReservationAsync(int reservationId, [FromBody] DateTime checkInTime)
+        {
+            if (checkInTime == default)
+            {
+                return BadRequest("Invalid check-in time.");
+            }
+            var response = await _reservationService.CheckInReservationAsync(reservationId, checkInTime);
+            return response.Success
+                 ? Ok(response)
+                 : NotFound(response.Message);
+        }
+        [HttpPost("{reservationId}/check-out")]
+        public async Task<IActionResult> CheckOutReservationAsync(int reservationId, [FromBody] DateTime checkOutTime)
+        {
+            if (checkOutTime == default)
+            {
+                return BadRequest("Invalid check-out time.");
+            }
+            var response = await _reservationService.CheckOutReservationAsync(reservationId, checkOutTime);
+            return response.Success
+                 ? Ok(response)
+                 : NotFound(response.Message);
+        }
     }
 }

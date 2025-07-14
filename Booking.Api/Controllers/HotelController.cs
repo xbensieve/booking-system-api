@@ -1,5 +1,6 @@
 ﻿using Booking.Service.Interfaces;
 using Booking.Service.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -24,7 +25,7 @@ namespace Booking.Api.Controllers
                 ? Ok(response)
                 : BadRequest(response.Message);
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(int id, [FromBody] HotelRequest request)
         {
@@ -46,7 +47,7 @@ namespace Booking.Api.Controllers
                 ? Ok(response)
                 : NotFound(response.Message);
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] HotelRequest request)
         {
@@ -61,7 +62,7 @@ namespace Booking.Api.Controllers
                 ? Ok(response)
                 : BadRequest(response.Message);
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
