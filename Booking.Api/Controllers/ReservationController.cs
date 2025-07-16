@@ -1,5 +1,5 @@
-﻿using Booking.Service.Interfaces;
-using Booking.Service.Models;
+﻿using Booking.Application.DTOs.Reservation;
+using Booking.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

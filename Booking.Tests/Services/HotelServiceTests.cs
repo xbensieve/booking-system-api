@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
-using Booking.Repository.Interfaces;
-using Booking.Repository.Models;
-using Booking.Service.Implementations;
-using Booking.Service.Models;
+using Booking.Application.DTOs.Hotel;
+using Booking.Application.Implementations;
+using Booking.Domain.Entities;
+using Booking.Domain.Interfaces;
 using Moq;
 using Xunit;
 

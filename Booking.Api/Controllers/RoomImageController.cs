@@ -1,5 +1,5 @@
-﻿using Booking.Service.Interfaces;
-using Booking.Service.Models;
+﻿using Booking.Application.DTOs.Room;
+using Booking.Application.Interfaces;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Authorization;
