@@ -1,5 +1,6 @@
-﻿using Booking.Service.Interfaces;
-using Booking.Service.Models;
+﻿using Booking.Application.DTOs.Order;
+using Booking.Application.DTOs.Payment;
+using Booking.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860

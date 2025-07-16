@@ -16,8 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Booking.Repository\Booking.Repository.csproj" />
-    <ProjectReference Include="..\Booking.Service\Booking.Service.csproj" />
+    <ProjectReference Include="..\Booking.Application\Booking.Application.csproj" />
+    <ProjectReference Include="..\Booking.Domain\Booking.Domain.csproj" />
+    <ProjectReference Include="..\Booking.Infrastructure\Booking.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

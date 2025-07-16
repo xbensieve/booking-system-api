@@ -1,8 +1,8 @@
-﻿using Booking.Service.Interfaces;
-using Booking.Service.Models;
+﻿using Booking.Application.DTOs.Auth;
+using Booking.Application.Interfaces;
 using FirebaseAdmin.Auth;
 using Microsoft.AspNetCore.Mvc;
-using TokenRequest = Booking.Service.Models.TokenRequest;
+using TokenRequest = Booking.Application.DTOs.Auth.TokenRequest;
 
 namespace Booking.Api.Controllers
 {
