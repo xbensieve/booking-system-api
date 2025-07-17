@@ -273,6 +273,7 @@ namespace Booking.Application.Implementations
             reservation.EarlyCheckInSurcharge = surcharge.EarlyCheckInFee;
             reservation.LateCheckOutSurcharge = surcharge.LateCheckOutFee;
             reservation.ActualPrice = surcharge.Total;
+            reservation.Room.IsAvailable = true;
 
             await _unitOfWork.BeginTransactionAsync();
             try

@@ -28,8 +28,15 @@ namespace Booking.Domain.Entities
         [StringLength(2000, ErrorMessage = "Description must not exceed 2000 characters.")]
         public string? Description { get; set; }
 
-        [Range(0.1, 5, ErrorMessage = "Star rating must be between 0.1 and 5.")]
-        public double? StarRating { get; set; }
+        [Range(0, 5)]
+        public double AverageRating { get; set; } = 0;
+
+        public int TotalReviews { get; set; } = 0;
+
+        [Required(ErrorMessage = "Phone number is required.")]
+        [StringLength(15, ErrorMessage = "Phone number must not exceed 15 characters.")]
+        public string PhoneNumber { get; set; }
+
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

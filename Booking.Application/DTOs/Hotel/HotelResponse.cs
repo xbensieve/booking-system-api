@@ -14,9 +14,13 @@ namespace Booking.Application.DTOs.Hotel
 
         public string Country { get; set; } = string.Empty;
 
+        public string PhoneNumber { get; set; } = string.Empty;
+
         public string? Description { get; set; }
 
-        public double? StarRating { get; set; }
+        public double AverageRating { get; set; }
+
+        public int TotalReviews { get; set; }
 
         public DateTime CreatedAt { get; set; }
 

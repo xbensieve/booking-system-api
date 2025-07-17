@@ -60,6 +60,13 @@ namespace Booking.Api.Controllers
                     { "role", "Admin" }
                 });
             }
+            else
+            {
+                await FirebaseAuth.DefaultInstance.SetCustomUserClaimsAsync(uid, new Dictionary<string, object>
+                {
+                    {"role", "Customer" }
+                });
+            }
             var updatedUser = await FirebaseAuth.DefaultInstance.GetUserAsync(uid);
             var claims = updatedUser.CustomClaims ?? new Dictionary<string, object>();
 

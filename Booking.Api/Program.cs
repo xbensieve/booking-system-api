@@ -44,6 +44,8 @@ namespace Booking.Api
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<IPaymentService, VnPayService>();
             builder.Services.AddScoped<IAdminService, AdminService>();
+            builder.Services.AddScoped<IReviewService, ReviewService>();
+            builder.Services.AddScoped<IMLService, MLModelService>();
             builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             builder.Services.AddHostedService<BackgroundWorker>();
             builder.Services.AddAutoMapper(typeof(MappingProfile));
@@ -131,11 +133,14 @@ namespace Booking.Api
             app.UseCors("AllowFrontend");
 
             app.UseMiddleware<FirebaseAuthMiddleware>();
+
             app.UseMiddleware<CsrfValidationMiddleware>();
 
             app.UseAuthentication();
 
             app.UseAuthorization();
+
+            //app.MapHub<ChatHub>("/chathub");
 
             app.MapControllers();
 

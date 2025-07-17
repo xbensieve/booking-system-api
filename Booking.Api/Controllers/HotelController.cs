@@ -12,9 +12,11 @@ namespace Booking.Api.Controllers
     public class HotelController : ControllerBase
     {
         private readonly IHotelService _hotelService;
-        public HotelController(IHotelService hotelService)
+        private readonly IReviewService _reviewService;
+        public HotelController(IHotelService hotelService, IReviewService reviewService)
         {
             _hotelService = hotelService ?? throw new ArgumentNullException(nameof(hotelService));
+            _reviewService = reviewService;
         }
 
         [HttpGet]
@@ -70,6 +72,12 @@ namespace Booking.Api.Controllers
             return response.Success
                 ? Ok(response)
                 : NotFound(response.Message);
+        }
+        [HttpGet("{id}/reviews")]
+        public async Task<IActionResult> Get(int id, int page = 1, int pageSize = 10)
+        {
+            var response = await _reviewService.GetReviewsByHotelIdAsync(id, page, pageSize);
+            return (response.Success) ? Ok(response) : BadRequest(response.Message);
         }
     }
 }
