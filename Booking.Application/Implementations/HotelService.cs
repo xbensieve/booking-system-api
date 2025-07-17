@@ -30,6 +30,7 @@ namespace Booking.Application.Implementations
                 Address = request.Address,
                 City = request.City,
                 Country = request.Country,
+                PhoneNumber = request.PhoneNumber,
                 Description = request.Description,
             };
 
@@ -144,6 +145,44 @@ namespace Booking.Application.Implementations
             {
                 return ApiResponse<object>.Fail("An error occurred while updating the hotel.", ex.Message);
             }
+        }
+
+        public async Task UpdateHotelRatingAsync(int hotelId, double newRating)
+        {
+            var hotel = await _unitOfWork.Hotels.GetByIdAsync(hotelId);
+            if (hotel == null) return;
+
+            hotel.TotalReviews += 1;
+            hotel.AverageRating = ((hotel.AverageRating * (hotel.TotalReviews - 1)) + newRating) / hotel.TotalReviews;
+            hotel.AverageRating = Math.Round(hotel.AverageRating, 2);
+            hotel.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Hotels.Update(hotel);
+        }
+
+        public async Task UpdateHotelRatingOnReviewDeletedAsync(int hotelId, int deletedRating)
+        {
+            var hotel = await _unitOfWork.Hotels.GetByIdAsync(hotelId);
+            if (hotel == null) return;
+
+            hotel.AverageRating = ((hotel.AverageRating * hotel.TotalReviews) - deletedRating) / hotel.TotalReviews;
+            hotel.AverageRating = Math.Round(hotel.AverageRating, 2);
+            hotel.TotalReviews -= 1;
+            hotel.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Hotels.Update(hotel);
+        }
+
+        public async Task UpdateHotelRatingOnReviewEditAsync(int hotelId, int oldRating, int newRating)
+        {
+            var hotel = await _unitOfWork.Hotels.GetByIdAsync(hotelId);
+            if (hotel == null) return;
+
+            hotel.AverageRating = ((hotel.AverageRating * hotel.TotalReviews) - oldRating + newRating) / hotel.TotalReviews;
+            hotel.AverageRating = Math.Round(hotel.AverageRating, 2);
+            hotel.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Hotels.Update(hotel);
         }
     }
 }

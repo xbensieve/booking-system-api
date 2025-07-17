@@ -19,6 +19,9 @@ namespace Booking.Application.DTOs.Hotel
         [Required(ErrorMessage = "Country is required.")]
         [StringLength(100, ErrorMessage = "Country must not exceed 100 characters.")]
         public string Country { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Phone number is required.")]
+        [StringLength(15, ErrorMessage = "Phone number must not exceed 15 characters.")]
+        public string PhoneNumber { get; set; } = string.Empty;
 
         [StringLength(2000, ErrorMessage = "Description must not exceed 2000 characters.")]
         public string? Description { get; set; }
