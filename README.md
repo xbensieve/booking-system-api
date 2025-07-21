@@ -20,6 +20,7 @@ RoomBooking Backend is a robust and scalable backend system for managing hotel r
 - User authentication via Firebase
 - Hotel and room management
 - Payment processing with VNPAY
+- Notification via email
 - Review system for hotels
 - Integration with Cloudinary for image storage
 
@@ -90,7 +91,10 @@ RoomBooking Backend is a robust and scalable backend system for managing hotel r
   `VNP_BASE_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html`
 
   `VNP_RETURN_URL=https://{your-development-port}/api/payments/handle-payment-response`
+  
+  `MailSettings__EMAIL=`
 
+  `MailSettings__PASSWORD=`
    
   
 3. Run with Docker
