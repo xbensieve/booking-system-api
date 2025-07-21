@@ -12,6 +12,10 @@ RoomBooking Backend is a robust and scalable backend system for managing hotel r
 
 **Purpose:** Manage hotel reservations, rooms, reviews, and payments
 
+**Database:**
+
+<img width="1498" height="763" alt="image" src="https://github.com/user-attachments/assets/74a0a722-c9d1-4df8-91e2-ff2172115382" />
+
 ## Features:
 - User authentication via Firebase
 - Hotel and room management
