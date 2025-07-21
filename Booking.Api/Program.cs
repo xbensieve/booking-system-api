@@ -4,6 +4,8 @@ using Booking.Application.Implementations;
 using Booking.Application.Interfaces;
 using Booking.Application.Mapping;
 using Booking.Domain.Interfaces;
+using Booking.Infrastructure.ExternalService.Implementations;
+using Booking.Infrastructure.ExternalService.Interfaces;
 using Booking.Infrastructure.Repositories;
 using Booking.Infrastructure.UoW;
 using Booking.Repository.ApplicationContext;
@@ -43,6 +45,7 @@ namespace Booking.Api
             builder.Services.AddScoped<IRoomImageService, RoomImageService>();
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<IPaymentService, VnPayService>();
+            builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IAdminService, AdminService>();
             builder.Services.AddScoped<IReviewService, ReviewService>();
             builder.Services.AddScoped<IMLService, MLModelService>();

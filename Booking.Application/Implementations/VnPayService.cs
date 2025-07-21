@@ -5,6 +5,7 @@ using Booking.Application.Interfaces;
 using Booking.Domain.Entities;
 using Booking.Domain.Enums;
 using Booking.Domain.Interfaces;
+using Booking.Infrastructure.ExternalService.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -17,13 +18,15 @@ namespace Booking.Application.Implementations
     public class VnPayService : IPaymentService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IEmailService _emailService;
         private readonly IBackgroundTaskQueue _taskQueue;
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<VnPayService> _logger;
-        public VnPayService(IUnitOfWork unitOfWork, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, ILogger<VnPayService> logger, IBackgroundTaskQueue taskQueue)
+        public VnPayService(IUnitOfWork unitOfWork, IEmailService emailService, IConfiguration configuration, IHttpContextAccessor httpContextAccessor, ILogger<VnPayService> logger, IBackgroundTaskQueue taskQueue)
         {
             _unitOfWork = unitOfWork;
+            _emailService = emailService;
             _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
@@ -88,6 +91,7 @@ namespace Booking.Application.Implementations
                 {
                     var reservation = await _unitOfWork.Reservations.Query()
                         .Include(r => r.Room)
+                        .Include(r => r.User)
                         .Where(r => r.Id == int.Parse(response.vnp_TxnRef) && r.Status == BookingStatus.Pending)
                         .FirstOrDefaultAsync();
 
@@ -110,6 +114,7 @@ namespace Booking.Application.Implementations
                     {
                         var scopedUnitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
                         var logger = serviceProvider.GetRequiredService<ILogger<VnPayService>>();
+                        var emailService = serviceProvider.GetRequiredService<IEmailService>();
 
                         try
                         {
@@ -130,8 +135,29 @@ namespace Booking.Application.Implementations
                         }
                         catch (Exception ex)
                         {
-                            logger.LogError(ex, "Failed to save Payment in background.");
+                            logger.LogError(ex, "Failed to save payment.");
                         }
+
+                        try
+                        {
+                            string subject = "Your Reservation is Confirmed";
+                            string htmlBody = $@"
+                                                <h2>Thank you for your payment!</h2>
+                                                <p>Your reservation (ID: <strong>{reservation.Id}</strong>) has been confirmed.</p>
+                                                <p>Total Paid: <strong>{reservation.TotalPrice:C}</strong></p>
+                                                <p>Room: <strong>{reservation.Room.RoomNumber}</strong></p>
+                                                <p>Status: Confirmed</p>
+                                                <p>Date: {DateTime.Now:yyyy-MM-dd HH:mm}</p>
+                                                <br/>
+                                                <p>- XBensieve Support Team</p>";
+                            await emailService.SendEmailAsync(reservation.User.Email, subject, htmlBody);
+                            logger.LogInformation("Email sent to {Email}", reservation.User.Email);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Failed to send confirmation email.");
+                        }
+
                     });
 
                     return ApiResponse<object>.Ok(new
