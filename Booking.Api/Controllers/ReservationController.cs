@@ -2,6 +2,7 @@
 using Booking.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -16,11 +17,13 @@ namespace Booking.Api.Controllers
         {
             _reservationService = reservationService ?? throw new ArgumentNullException(nameof(reservationService));
         }
-        [Authorize]
+        [Authorize(Roles = "Customer")]
         [HttpPost]
         public async Task<IActionResult> CreateReservationAsync([FromBody] ReservationRequest request)
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var idStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(idStr) || !Guid.TryParse(idStr, out var userId))
+                return Unauthorized("Invalid user ID in token.");
 
             if (userId == null)
             {
@@ -47,9 +50,9 @@ namespace Booking.Api.Controllers
                  : NotFound(response.Message);
         }
         [HttpGet("users/{userId}")]
-        public async Task<IActionResult> GetReservationsByUserIdAsync(string userId, int page = 1, int pageSize = 10)
+        public async Task<IActionResult> GetReservationsByUserIdAsync(Guid userId, int page = 1, int pageSize = 10)
         {
-            if (string.IsNullOrEmpty(userId))
+            if (userId == Guid.Empty)
             {
                 return BadRequest("User ID is required.");
             }
@@ -58,6 +61,7 @@ namespace Booking.Api.Controllers
                  ? Ok(response)
                  : NotFound(response.Message);
         }
+        [Authorize]
         [HttpDelete("{reservationId}")]
         public async Task<IActionResult> CancelReservationAsync(int reservationId)
         {
@@ -66,6 +70,7 @@ namespace Booking.Api.Controllers
                  ? Ok(response)
                  : NotFound(response.Message);
         }
+        [Authorize]
         [HttpPost("{reservationId}/check-in")]
         public async Task<IActionResult> CheckInReservationAsync(int reservationId, [FromBody] DateTime checkInTime)
         {
@@ -78,6 +83,7 @@ namespace Booking.Api.Controllers
                  ? Ok(response)
                  : NotFound(response.Message);
         }
+        [Authorize]
         [HttpPost("{reservationId}/check-out")]
         public async Task<IActionResult> CheckOutReservationAsync(int reservationId, [FromBody] DateTime checkOutTime)
         {

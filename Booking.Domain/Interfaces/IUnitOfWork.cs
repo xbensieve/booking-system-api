@@ -12,6 +12,8 @@ namespace Booking.Domain.Interfaces
         IGenericRepository<RoomImage> RoomImages { get; }
         IGenericRepository<Review> Reviews { get; }
         IGenericRepository<Payment> Payments { get; }
+        IGenericRepository<RefreshToken> RefreshTokens { get; }
+        IGenericRepository<UserOtp> UserOtps { get; }
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();

@@ -14,6 +14,8 @@ namespace Booking.Repository.ApplicationContext
         public DbSet<User> Users { get; set; }
         public DbSet<HotelImage> HotelImages { get; set; }
         public DbSet<RoomImage> RoomImages { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<UserOtp> UserOtps { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

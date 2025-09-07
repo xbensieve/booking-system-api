@@ -38,5 +38,43 @@ namespace Booking.Application.Implementations
             return ApiResponse<List<ReservationResponse>>.Ok(mapped, $"Found {total} reservations on {today:yyyy-MM-dd}.");
         }
 
+        public async Task<ApiResponse<object>> GetReservationStatisticsAsync(DateTime startDate, DateTime endDate)
+        {
+            var reservationCount = await _unitOfWork.Reservations.Query()
+                .Where(r => r.CreatedAt >= startDate && r.CreatedAt <= endDate)
+                .CountAsync();
+
+            return new ApiResponse<object>
+            {
+                Success = true,
+                Data = new { ReservationCount = reservationCount }
+            };
+        }
+
+        public async Task<ApiResponse<object>> GetRevenueStatisticsAsync(DateTime startDate, DateTime endDate)
+        {
+            var revenue = await _unitOfWork.Payments.Query()
+                .Where(p => p.CreatedAt >= startDate && p.CreatedAt <= endDate && p.Status == Domain.Enums.PaymentStatus.Completed)
+                .SumAsync(p => (decimal?)p.Amount) ?? 0;
+
+            return new ApiResponse<object>
+            {
+                Success = true,
+                Data = new { Revenue = revenue }
+            };
+        }
+
+        public async Task<ApiResponse<object>> GetReviewStatisticsAsync(DateTime startDate, DateTime endDate)
+        {
+            var reviewCount = await _unitOfWork.Reviews.Query()
+               .Where(r => r.CreatedAt >= startDate && r.CreatedAt <= endDate)
+               .CountAsync();
+
+            return new ApiResponse<object>
+            {
+                Success = true,
+                Data = new { ReviewCount = reviewCount }
+            };
+        }
     }
 }

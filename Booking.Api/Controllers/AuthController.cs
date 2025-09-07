@@ -1,8 +1,8 @@
 ﻿using Booking.Application.DTOs.Auth;
 using Booking.Application.Interfaces;
-using FirebaseAdmin.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TokenRequest = Booking.Application.DTOs.Auth.TokenRequest;
+using System.Security.Claims;
 
 namespace Booking.Api.Controllers
 {
@@ -17,136 +17,208 @@ namespace Booking.Api.Controllers
             _authService = authService;
             _configuration = configuration;
         }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] TokenRequest request)
+        /// <summary>
+        /// Registers a new user.
+        /// </summary>
+        /// <param name="model">Registration model containing email, password, phone, etc.</param>
+        /// <returns>
+        /// 201 Created with the created user location when userId is available, 
+        /// or 200 OK with response payload; 400 Bad Request on validation/error.
+        /// </returns>
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
-            if (string.IsNullOrEmpty(request.IdToken)) return Unauthorized("Missing idToken");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            FirebaseToken decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(request.IdToken);
-            bool emailVerified = decodedToken.Claims.TryGetValue("email_verified", out var verifiedVal) && (bool)verifiedVal;
+            var response = await _authService.RegisterAsync(model);
 
-            if (!emailVerified)
-                return Unauthorized("Email not verified.");
+            if (!response.Success)
+                return BadRequest(new { response.Message });
 
-            string uid = decodedToken.Uid;
-
-            var userResponse = await _authService.GetUserByIdAsync(uid);
-
-            if (userResponse.Data == null)
+            try
             {
-                var newUser = new RegisterModel
-                {
-                    Uid = uid,
-                    Email = decodedToken.Claims.TryGetValue("email", out var emailVal) ? emailVal?.ToString() : null,
-                    FullName = decodedToken.Claims.TryGetValue("name", out var nameVal) ? nameVal?.ToString() : null,
-                    AvatarUrl = decodedToken.Claims.TryGetValue("picture", out var pictureVal) ? pictureVal?.ToString() : null,
-                };
+                var userObj = response.Data?.GetType().GetProperty("User")?.GetValue(response.Data);
+                var idObj = userObj?.GetType().GetProperty("UserId")?.GetValue(userObj);
 
-                var registerResponse = await _authService.RegisterAsync(newUser);
-
-                if (!registerResponse.Success)
+                if (idObj != null && Guid.TryParse(idObj.ToString(), out var userId))
                 {
-                    return BadRequest(registerResponse.Message);
+                    return CreatedAtAction(nameof(GetUser), new { userId }, response);
                 }
             }
-
-            var email = decodedToken.Claims.TryGetValue("email", out var emailObj) ? emailObj?.ToString() : null;
-            var adminEmails = _configuration.GetSection("Admins").Get<List<string>>();
-            if (email != null && adminEmails.Contains(email))
+            catch
             {
-                await FirebaseAuth.DefaultInstance.SetCustomUserClaimsAsync(uid, new Dictionary<string, object>
-                {
-                    { "role", "Admin" }
-                });
+                // ignore extraction errors, fall back to Ok
             }
-            else
-            {
-                await FirebaseAuth.DefaultInstance.SetCustomUserClaimsAsync(uid, new Dictionary<string, object>
-                {
-                    {"role", "Customer" }
-                });
-            }
-            var updatedUser = await FirebaseAuth.DefaultInstance.GetUserAsync(uid);
-            var claims = updatedUser.CustomClaims ?? new Dictionary<string, object>();
 
+            return Ok(response);
+        }
+        /// <summary>
+        /// Gets a user by id.
+        /// </summary>
+        /// <param name="userId">The user id (GUID).</param>
+        /// <returns>200 OK with user data or 404 NotFound.</returns>
+        [HttpGet("{userId:guid}")]
+        public async Task<IActionResult> GetUser(Guid userId)
+        {
+            var response = await _authService.GetUserByIdAsync(userId);
 
-            var expires = DateTime.UtcNow.AddMinutes(55);
+            if (!response.Success)
+                return NotFound(new { response.Message });
 
-            Response.Cookies.Append("idToken", request.IdToken, new CookieOptions
+            return Ok(response);
+        }
+        /// <summary>
+        /// Login user with email and password
+        /// </summary>
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginModel model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var response = await _authService.LoginAsync(model);
+
+            if (!response.Success)
+                return Unauthorized(new { response.Message });
+
+            var accessToken = response.Data?.GetType().GetProperty("AccessToken")?.GetValue(response.Data)?.ToString();
+            var refreshToken = response.Data?.GetType().GetProperty("RefreshToken")?.GetValue(response.Data)?.ToString();
+
+            if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
+                return StatusCode(500, "Failed to generate tokens.");
+
+            Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = expires
-            });
-
-            var csrfToken = Guid.NewGuid().ToString();
-
-            Response.Cookies.Append("X-CSRF-TOKEN", csrfToken, new CookieOptions
-            {
-                HttpOnly = false,
-                Secure = true,
-                SameSite = SameSiteMode.None,
-                Expires = expires
-            });
-
-            Response.Cookies.Append("X-CSRF-EXPIRES", expires.ToString("O"), new CookieOptions
-            {
-                HttpOnly = false,
-                Secure = true,
-                SameSite = SameSiteMode.None,
-                Expires = expires
+                Expires = DateTime.UtcNow.AddDays(int.Parse(_configuration["Jwt:RefreshTokenExpirationDays"] ?? "7"))
             });
 
             return Ok(new
             {
-                message = "Login success",
-                claims
+                Message = "Login successful",
+                AccessToken = accessToken,
+                User = response.Data?.GetType().GetProperty("User")?.GetValue(response.Data)
             });
         }
-
-
-        [HttpPost("logout")]
-        public IActionResult Logout()
+        /// <summary>
+        /// Refreshes the access token when the current one is expired.  
+        /// The refresh token is retrieved from an HttpOnly cookie.
+        /// </summary>
+        /// <param name="request">
+        /// The request containing the expired access token.
+        /// </param>
+        /// <returns>
+        /// Returns 200 OK with a new access token (and sets a new refresh token in an HttpOnly cookie),  
+        /// or 401 Unauthorized if the refresh token is invalid or expired.
+        /// </returns>
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
         {
-            var expired = DateTime.UnixEpoch;
+            var refreshTokenRaw = Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(refreshTokenRaw))
+                return Unauthorized("Missing refresh token cookie.");
 
-            Response.Cookies.Append("idToken", "", new CookieOptions
+            var result = await _authService.RefreshTokenAsync(request.AccessToken, refreshTokenRaw);
+
+            if (!result.Success)
+                return Unauthorized(result.Message);
+
+            var newRefreshToken = result.Data?.GetType().GetProperty("RefreshToken")?.GetValue(result.Data)?.ToString();
+            if (!string.IsNullOrEmpty(newRefreshToken))
             {
-                Expires = expired,
+                Response.Cookies.Append("refreshToken", newRefreshToken, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None,
+                    Expires = DateTime.UtcNow.AddDays(7)
+                });
+            }
+
+            return Ok(new
+            {
+                Message = result.Message,
+                AccessToken = result.Data?.GetType().GetProperty("AccessToken")?.GetValue(result.Data),
+                User = result.Data?.GetType().GetProperty("User")?.GetValue(result.Data)
+            });
+        }
+        /// <summary>
+        /// Logs out the current user by removing the refresh token from both
+        /// the database and the HttpOnly cookie.
+        /// </summary>
+        /// <returns>
+        /// Returns 200 OK if logout was successful, otherwise 400 BadRequest.
+        /// </returns>
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(refreshToken))
+                return BadRequest("No refresh token found.");
+
+            var result = await _authService.LogoutAsync(refreshToken);
+
+            Response.Cookies.Delete("refreshToken", new CookieOptions
+            {
                 HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.None,
-                Path = "/"
+                SameSite = SameSiteMode.None
             });
 
-            Response.Cookies.Append("X-CSRF-TOKEN", "", new CookieOptions
-            {
-                Expires = expired,
-                HttpOnly = false,
-                Secure = true,
-                SameSite = SameSiteMode.None,
-                Path = "/"
-            });
+            if (!result.Success)
+                return BadRequest(result.Message);
 
-            return Ok(new { message = "Logged out successfully" });
+            return Ok(new { message = "Logout successful" });
         }
-        [HttpGet("protected")]
-        public async Task<IActionResult> ProtectedEndpoint()
+
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpByEmailRequest request)
         {
-            var token = Request.Cookies["idToken"];
-
-            try
-            {
-                FirebaseToken decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(token);
-                string uid = decodedToken.Uid;
-                return Ok(new { Message = "Access granted", Uid = uid });
-            }
-            catch (FirebaseAuthException)
-            {
-                return Unauthorized("Invalid or expired token");
-            }
+            var result = await _authService.ResendOtpByEmailAsync(request.Email);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
         }
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailByOtpRequest request)
+        {
+            var result = await _authService.VerifyEmailByOtpAsync(request.Email, request.OtpCode);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            var result = await _authService.ForgotPasswordAsync(request.Email);
+            return Ok(result);
+        }
+        [HttpPost("verify-reset-otp")]
+        public async Task<IActionResult> VerifyResetOtp([FromBody] VerifyResetOtpRequest request)
+        {
+            var result = await _authService.VerifyResetOtpAsync(request.Email, request.OtpCode);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
+        [Authorize]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            var idStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(idStr) || !Guid.TryParse(idStr, out var userId))
+                return Unauthorized("Invalid user ID in token.");
+
+            var result = await _authService.ResetPasswordAsync(userId, request.NewPassword);
+
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
+        public record RefreshTokenRequest(string AccessToken);
+        public record ResendOtpByEmailRequest(string Email);
+        public record VerifyEmailByOtpRequest(string Email, string OtpCode);
+        public record ForgotPasswordRequest(string Email);
+        public record VerifyResetOtpRequest(string Email, string OtpCode);
+        public record ResetPasswordRequest(string NewPassword);
     }
 }

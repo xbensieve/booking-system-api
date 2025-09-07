@@ -9,10 +9,7 @@ namespace Booking.Domain.Entities
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
-
-        [Required(ErrorMessage = "User UID is required.")]
-        [StringLength(128, ErrorMessage = "User UID must not exceed 128 characters.")]
-        public string UserUid { get; set; } = string.Empty;
+        public Guid UserId { get; set; }
 
         [Required(ErrorMessage = "Room ID is required.")]
         public int RoomId { get; set; }
@@ -50,7 +47,7 @@ namespace Booking.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         [Required]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-        [ForeignKey("UserUid")]
+        [ForeignKey("UserId")]
         public virtual User? User { get; set; }
         [ForeignKey("RoomId")]
         public virtual Room? Room { get; set; }

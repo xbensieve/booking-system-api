@@ -25,6 +25,8 @@ namespace Booking.Application.Mapping
             CreateMap<Review, ReviewResponse>()
                 .ForMember(dest => dest.HotelName, opt => opt.MapFrom(src => src.Hotel != null ? src.Hotel.Name : ""))
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User != null ? src.User.Name : ""));
+            CreateMap<HotelAddress, HotelAddressResponse>();
+            CreateMap<HotelAddressRequest, HotelAddress>();
         }
     }
 }

@@ -12,9 +12,7 @@ namespace Booking.Domain.Entities
         [Required(ErrorMessage = "Hotel ID is required.")]
         public int HotelId { get; set; }
 
-        [Required(ErrorMessage = "User UID is required.")]
-        [StringLength(128, ErrorMessage = "User UID must not exceed 128 characters.")]
-        public string UserUid { get; set; } = string.Empty;
+        public Guid UserId { get; set; }
 
         [Required(ErrorMessage = "Rating is required.")]
         [Range(1, 5, ErrorMessage = "Rating must be between 1 and 5.")]
@@ -29,7 +27,7 @@ namespace Booking.Domain.Entities
         [ForeignKey("HotelId")]
         public virtual Hotel? Hotel { get; set; }
 
-        [ForeignKey("UserUid")]
+        [ForeignKey("UserId")]
         public virtual User? User { get; set; }
     }
 }

@@ -33,7 +33,8 @@ namespace Booking.Domain.Entities
         public string? Description { get; set; }
 
         public bool IsAvailable { get; set; } = true;
-
+        public string Amenities { get; set; }
+        public bool IsSmokingAllowed { get; set; } = false;
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

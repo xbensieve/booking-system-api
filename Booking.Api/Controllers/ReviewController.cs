@@ -1,6 +1,7 @@
 ﻿using Booking.Application.DTOs.Review;
 using Booking.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Booking.Api.Controllers
 {
@@ -16,11 +17,9 @@ namespace Booking.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] ReviewRequest request)
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
-            {
-                return Unauthorized("User is not authenticated.");
-            }
+            var idStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(idStr) || !Guid.TryParse(idStr, out var userId))
+                return Unauthorized("Invalid user ID in token.");
 
             if (!ModelState.IsValid)
             {
@@ -28,41 +27,35 @@ namespace Booking.Api.Controllers
             }
 
             var response = await _reviewService.CreateReviewAsync(userId, request);
-            return (response.Success) ? Ok(response) : BadRequest(response);
+            return response.Success
+                ? Ok(response)
+                : BadRequest(response.Message);
         }
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(int id, [FromBody] ReviewUpdate request)
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
-            {
-                return Unauthorized("User is not authenticated.");
-            }
-
+            var idStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(idStr) || !Guid.TryParse(idStr, out var userId))
+                return Unauthorized("Invalid user ID in token.");
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-
             var response = await _reviewService.UpdateReviewAsync(userId, id, request);
-            return (response.Success) ? Ok(response) : BadRequest(response);
+            return response.Success
+                ? Ok(response)
+                : BadRequest(response.Message);
         }
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
-            {
-                return Unauthorized("User is not authenticated.");
-            }
-
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
+            var idStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(idStr) || !Guid.TryParse(idStr, out var userId))
+                return Unauthorized("Invalid user ID in token.");
             var response = await _reviewService.DeleteReviewAsync(userId, id);
-            return (response.Success) ? Ok(response) : BadRequest(response);
+            return response.Success
+                ? Ok(response)
+                : BadRequest(response.Message);
         }
     }
 }

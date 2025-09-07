@@ -20,11 +20,11 @@ namespace Booking.Application.Implementations
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
-        public async Task<ApiResponse<object>> CreateReservationAsync(string UserId, ReservationRequest request)
+        public async Task<ApiResponse<object>> CreateReservationAsync(Guid userId, ReservationRequest request)
         {
             if (request == null) return ApiResponse<object>.Fail("Reservation request cannot be null.");
 
-            var user = await _unitOfWork.Users.GetByIdAsync(UserId);
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
             if (user == null)
             {
                 return ApiResponse<object>.Fail("User not found.");
@@ -63,7 +63,7 @@ namespace Booking.Application.Implementations
 
                 var reservation = new Reservation
                 {
-                    UserUid = UserId,
+                    UserId = userId,
                     RoomId = request.RoomId,
                     CheckInDate = request.CheckInDate,
                     CheckOutDate = request.CheckOutDate,
@@ -149,7 +149,7 @@ namespace Booking.Application.Implementations
             {
                 return ApiResponse<ReservationResponse>.Fail("Room not found.");
             }
-            var user = await _unitOfWork.Users.GetByIdAsync(reservation.UserUid);
+            var user = await _unitOfWork.Users.GetByIdAsync(reservation.UserId);
             if (user == null)
             {
                 return ApiResponse<ReservationResponse>.Fail("User not found.");
@@ -158,14 +158,14 @@ namespace Booking.Application.Implementations
             return ApiResponse<ReservationResponse>.Ok(response, "Reservation retrieved successfully.");
         }
 
-        public async Task<ApiResponse<List<ReservationResponse>>> GetReservationsByUserIdAsync(string userId, int page, int pageSize)
+        public async Task<ApiResponse<List<ReservationResponse>>> GetReservationsByUserIdAsync(Guid userId, int page, int pageSize)
         {
-            if (string.IsNullOrEmpty(userId))
+            if (userId == Guid.Empty)
             {
                 return ApiResponse<List<ReservationResponse>>.Fail("User ID cannot be null or empty.");
             }
             var reservations = await _unitOfWork.Reservations.Query()
-                .Where(r => r.UserUid == userId && !r.IsDeleted)
+                .Where(r => r.UserId == userId && !r.IsDeleted)
                 .Include(r => r.User)
                 .Include(r => r.Room)
                 .OrderByDescending(r => r.CreatedAt)
