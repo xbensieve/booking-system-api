@@ -1,6 +1,4 @@
-﻿using Booking.Domain.Enums;
-
-namespace Booking.Application.DTOs.Auth
+﻿namespace Booking.Application.DTOs.User
 {
     public class UserResponse
     {
@@ -9,11 +7,8 @@ namespace Booking.Application.DTOs.Auth
         public string? Name { get; set; }
         public string? PhoneNumber { get; set; }
         public string? AvatarUrl { get; set; }
-        public UserRole Role { get; set; }
-        public string? AuthProvider { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public bool IsDeleted { get; set; }
     }
 }

@@ -1,5 +1,4 @@
 using Booking.Api.Config;
-using Booking.Api.Middleware;
 using Booking.Application.Implementations;
 using Booking.Application.Interfaces;
 using Booking.Application.Mapping;
@@ -10,9 +9,11 @@ using Booking.Infrastructure.Repositories;
 using Booking.Infrastructure.UoW;
 using Booking.Repository.ApplicationContext;
 using CloudinaryDotNet;
-using FirebaseAdmin;
-using Google.Apis.Auth.OAuth2;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
 
 namespace Booking.Api
 {
@@ -25,14 +26,6 @@ namespace Booking.Api
             DotNetEnv.Env.Load();
             builder.Configuration.AddEnvironmentVariables();
             builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
-            if (FirebaseApp.DefaultInstance == null)
-            {
-                FirebaseApp.Create(new AppOptions
-                {
-                    Credential = GoogleCredential.FromFile(Path.Combine(builder.Environment.ContentRootPath, "firebase-adminsdk.json"))
-                });
-            }
-
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
 
@@ -48,7 +41,7 @@ namespace Booking.Api
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IAdminService, AdminService>();
             builder.Services.AddScoped<IReviewService, ReviewService>();
-            builder.Services.AddScoped<IMLService, MLModelService>();
+            builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             builder.Services.AddHostedService<BackgroundWorker>();
             builder.Services.AddAutoMapper(typeof(MappingProfile));
@@ -57,7 +50,44 @@ namespace Booking.Api
             builder.Logging.ClearProviders();
             builder.Logging.AddConsole();
             builder.Logging.AddDebug();
+            var jwtKey = config["Jwt:Key"];
+            if (string.IsNullOrEmpty(jwtKey))
+            {
+                throw new InvalidOperationException("JWT Key is missing in configuration.");
+            }
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = config["Jwt:Issuer"],
+                    ValidAudience = config["Jwt:Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]))
+                };
 
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+                        if (!string.IsNullOrEmpty(authHeader))
+                        {
+                            if (!authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                            {
+                                context.Token = authHeader;
+                            }
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
+            });
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", builder =>
@@ -83,42 +113,31 @@ namespace Booking.Api
                 cloudinarySettings.ApiSecret
             ));
             builder.Services.AddSingleton(cloudinary);
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen(options =>
+            builder.Services.AddSwaggerGen(c =>
             {
-                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-                {
-                    Title = "Booking API",
-                    Version = "v1",
-                    Description = "API documentation for the Booking system."
-                });
-
-                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
-                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                    Type = SecuritySchemeType.ApiKey,
                     Scheme = "Bearer",
                     BearerFormat = "JWT",
-                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-                    Description = "Enter your Firebase ID token here using the format: **Bearer &lt;token&gt;**"
+                    In = ParameterLocation.Header,
+                    Description = "JWT Authorization header using the Bearer scheme."
                 });
 
-                options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
                     {
-                        new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                        new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
                         {
-                            Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                            {
-                                Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            },
-                            Scheme = "Bearer",
-                            Name = "Bearer",
-                            In = Microsoft.OpenApi.Models.ParameterLocation.Header
-                        },
-                    Array.Empty<string>()
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                        Array.Empty<string>()
                     }
                 });
             });
@@ -135,15 +154,9 @@ namespace Booking.Api
 
             app.UseCors("AllowFrontend");
 
-            app.UseMiddleware<FirebaseAuthMiddleware>();
-
-            app.UseMiddleware<CsrfValidationMiddleware>();
-
             app.UseAuthentication();
 
             app.UseAuthorization();
-
-            //app.MapHub<ChatHub>("/chathub");
 
             app.MapControllers();
 

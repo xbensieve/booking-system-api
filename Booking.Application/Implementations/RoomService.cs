@@ -30,6 +30,7 @@ namespace Booking.Application.Implementations
                 RoomNumber = request.RoomNumber,
                 Description = request.Description,
                 PricePerNight = request.PricePerNight,
+                Amenities = request.Amenities ?? string.Empty,
                 Capacity = request.Capacity,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -48,7 +49,6 @@ namespace Booking.Application.Implementations
                 return ApiResponse<object>.Fail($"Error creating room: {ex.Message}");
             }
         }
-
         public async Task<ApiResponse<object>> DeleteRoomAsync(int roomId)
         {
             var room = await _unitOfWork.Rooms.GetByIdAsync(roomId);
@@ -69,7 +69,6 @@ namespace Booking.Application.Implementations
             }
 
         }
-
         public async Task<ApiResponse<RoomResponse>> GetRoomByIdAsync(int roomId)
         {
             var room = await _unitOfWork.Rooms.Query().Where(r => r.Id == roomId && !r.IsDeleted)
@@ -81,7 +80,6 @@ namespace Booking.Application.Implementations
 
             return ApiResponse<RoomResponse>.Ok(roomResponse, "Room retrieved successfully");
         }
-
         public async Task<ApiResponse<List<RoomResponse>>> GetRoomsByHotelIdAsync(int hotelId, int page = 1, int pageSize = 10)
         {
             var hotel = await _unitOfWork.Hotels.GetByIdAsync(hotelId);
@@ -104,7 +102,6 @@ namespace Booking.Application.Implementations
 
             return ApiResponse<List<RoomResponse>>.Ok(roomResponses, "Rooms retrieved successfully");
         }
-
         public async Task<ApiResponse<List<RoomResponse>>> SearchRoomsAsync(RoomSearchRequest request)
         {
             var query = _unitOfWork.Rooms.Query()
@@ -145,7 +142,6 @@ namespace Booking.Application.Implementations
             var roomResponses = _mapper.Map<List<RoomResponse>>(roomDtos);
             return ApiResponse<List<RoomResponse>>.Ok(roomResponses, "Rooms retrieved successfully");
         }
-
         public async Task<ApiResponse<object>> UpdateRoomAsync(int roomId, RoomRequest request)
         {
             var room = await _unitOfWork.Rooms.GetByIdAsync(roomId);
@@ -154,6 +150,7 @@ namespace Booking.Application.Implementations
             room.RoomNumber = request.RoomNumber;
             room.Description = request.Description;
             room.PricePerNight = request.PricePerNight;
+            room.Amenities = request.Amenities ?? string.Empty;
             room.Capacity = request.Capacity;
             room.UpdatedAt = DateTime.UtcNow;
             try

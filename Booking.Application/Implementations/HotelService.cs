@@ -17,7 +17,7 @@ namespace Booking.Application.Implementations
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
-        public async Task<ApiResponse<object>> CreateHotelAsync(HotelRequest request)
+        public async Task<ApiResponse<HotelResponse>> CreateHotelAsync(HotelRequest request)
         {
             if (request == null)
             {
@@ -27,11 +27,14 @@ namespace Booking.Application.Implementations
             var hotel = new Hotel
             {
                 Name = request.Name,
-                Address = request.Address,
-                City = request.City,
-                Country = request.Country,
                 PhoneNumber = request.PhoneNumber,
-                Description = request.Description,
+                Addresses = request.Addresses.Select(addr => new HotelAddress
+                {
+                    Street = addr.Street,
+                    City = addr.City,
+                    Country = addr.Country,
+                    PostalCode = addr.PostalCode
+                }).ToList(),
             };
 
             try
@@ -41,22 +44,26 @@ namespace Booking.Application.Implementations
 
                 if (result > 0)
                 {
-                    return ApiResponse<object>.Ok(new { hotelId = hotel.Id }, "Hotel created successfully.");
+                    var createdHotel = await _unitOfWork.Hotels.Query()
+                        .Include(h => h.Addresses)
+                        .FirstOrDefaultAsync(h => h.Id == hotel.Id);
+                    var hotelResponse = _mapper.Map<HotelResponse>(createdHotel);
+                    return ApiResponse<HotelResponse>.Ok(hotelResponse, "Hotel created successfully.");
                 }
                 else
                 {
-                    return ApiResponse<object>.Fail("Failed to create hotel. Please try again.");
+                    return ApiResponse<HotelResponse>.Fail("Failed to create hotel. Please try again.");
                 }
             }
             catch (Exception ex)
             {
-                return ApiResponse<object>.Fail("An error occurred while creating the hotel.", ex.Message);
+                return ApiResponse<HotelResponse>.Fail($"An error occurred while creating the hotel.\n{ex.Message}");
             }
         }
-
         public async Task<ApiResponse<object>> DeleteHotelAsync(int id)
         {
-            var hotel = await _unitOfWork.Hotels.GetByIdAsync(id);
+            var hotel = await _unitOfWork.Hotels.Query()
+                .FirstOrDefaultAsync(h => h.Id == id);
             if (hotel == null)
             {
                 return ApiResponse<object>.Fail("Hotel not found.");
@@ -84,7 +91,11 @@ namespace Booking.Application.Implementations
 
         public async Task<ApiResponse<List<HotelResponse>>> GetAllHotelsAsync(int page = 1, int pageSize = 10)
         {
-            var hotelsQuery = _unitOfWork.Hotels.Query().Include(h => h.Images).Include(h => h.Rooms);
+            var hotelsQuery = _unitOfWork.Hotels.Query()
+                .Where(h => !h.IsDeleted)
+                .Include(h => h.Addresses)
+                .Include(h => h.Images)
+                .Include(h => h.Rooms);
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 10;
             var totalHotels = hotelsQuery.Count();
@@ -101,7 +112,11 @@ namespace Booking.Application.Implementations
 
         public async Task<ApiResponse<HotelResponse>> GetHotelByIdAsync(int id)
         {
-            var hotel = await _unitOfWork.Hotels.Query().Include(h => h.Images).Include(h => h.Rooms).FirstOrDefaultAsync();
+            var hotel = await _unitOfWork.Hotels.Query()
+                .Include(h => h.Addresses)
+                .Include(h => h.Images)
+                .Include(h => h.Rooms)
+                .FirstOrDefaultAsync(h => h.Id == id);
             if (hotel == null)
             {
                 return ApiResponse<HotelResponse>.Fail("Hotel not found.");
@@ -112,38 +127,59 @@ namespace Booking.Application.Implementations
             return ApiResponse<HotelResponse>.Ok(hotelResponse, "Hotel retrieved successfully.");
         }
 
-        public async Task<ApiResponse<object>> UpdateHotelAsync(int id, HotelRequest request)
+        public async Task<ApiResponse<HotelResponse>> UpdateHotelAsync(int hotelId, HotelRequest request)
         {
             if (request == null)
             {
-                return ApiResponse<object>.Fail("Hotel request cannot be null.");
+                throw new ArgumentNullException(nameof(request), "Update hotel request cannot be null.");
             }
 
-            var hotel = await _unitOfWork.Hotels.GetByIdAsync(id);
+            var hotel = await _unitOfWork.Hotels.Query()
+                .Include(h => h.Addresses)
+                .Where(h => h.Id == hotelId)
+                .FirstOrDefaultAsync();
             if (hotel == null)
             {
-                return ApiResponse<object>.Fail("Hotel not found.");
+                return ApiResponse<HotelResponse>.Fail($"Hotel with Id {hotelId} not found.");
             }
 
-            hotel.Name = request.Name?.Trim() ?? hotel.Name;
-            hotel.Address = request.Address?.Trim() ?? hotel.Address;
-            hotel.City = request.City?.Trim() ?? hotel.City;
-            hotel.Country = request.Country?.Trim() ?? hotel.Country;
-            hotel.Description = request.Description?.Trim() ?? hotel.Description;
+            hotel.Name = request.Name;
+            hotel.PhoneNumber = request.PhoneNumber;
+            hotel.Description = request.Description;
             hotel.UpdatedAt = DateTime.UtcNow;
-
+            hotel.Addresses.Clear();
+            foreach (var addr in request.Addresses)
+            {
+                hotel.Addresses.Add(new HotelAddress
+                {
+                    Street = addr.Street,
+                    City = addr.City,
+                    Country = addr.Country,
+                    PostalCode = addr.PostalCode,
+                    HotelId = hotel.Id
+                });
+            }
             try
             {
                 _unitOfWork.Hotels.Update(hotel);
                 var result = await _unitOfWork.SaveChangesAsync();
 
-                return result > 0
-                    ? ApiResponse<object>.Ok(new { hotelId = hotel.Id }, "Hotel updated successfully.")
-                    : ApiResponse<object>.Fail("Failed to update hotel.");
+                if (result > 0)
+                {
+                    var updatedHotel = await _unitOfWork.Hotels.Query()
+                        .Include(h => h.Addresses)
+                        .FirstOrDefaultAsync(h => h.Id == hotel.Id);
+                    var hotelResponse = _mapper.Map<HotelResponse>(updatedHotel);
+                    return ApiResponse<HotelResponse>.Ok(hotelResponse, "Hotel updated successfully.");
+                }
+                else
+                {
+                    return ApiResponse<HotelResponse>.Fail("Failed to update hotel. Please try again.");
+                }
             }
             catch (Exception ex)
             {
-                return ApiResponse<object>.Fail("An error occurred while updating the hotel.", ex.Message);
+                return ApiResponse<HotelResponse>.Fail($"An error occurred while updating the hotel.\n{ex.Message}");
             }
         }
 

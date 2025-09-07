@@ -19,7 +19,7 @@ namespace Booking.Application.Implementations
             _hotelService = hotelService;
             _mapper = mapper;
         }
-        public async Task<ApiResponse<ReviewResponse>> CreateReviewAsync(string userId, ReviewRequest request)
+        public async Task<ApiResponse<ReviewResponse>> CreateReviewAsync(Guid userId, ReviewRequest request)
         {
             var user = await _unitOfWork.Users.GetByIdAsync(userId);
             if (user == null) return ApiResponse<ReviewResponse>.Fail("User not found");
@@ -30,7 +30,7 @@ namespace Booking.Application.Implementations
             var review = new Review
             {
                 HotelId = hotel.Id,
-                UserUid = user.Uid,
+                UserId = user.UserId,
                 Rating = request.Rating,
                 Comment = request.Comment,
                 CreatedAt = DateTime.Now,
@@ -64,7 +64,7 @@ namespace Booking.Application.Implementations
             }
         }
 
-        public async Task<ApiResponse<object>> DeleteReviewAsync(string userId, int reviewId)
+        public async Task<ApiResponse<object>> DeleteReviewAsync(Guid userId, int reviewId)
         {
             var user = await _unitOfWork.Users.GetByIdAsync(userId);
             if (user == null) return ApiResponse<object>.Fail("User not found");
@@ -72,7 +72,7 @@ namespace Booking.Application.Implementations
 
             var review = await _unitOfWork.Reviews.Query()
                 .Include(r => r.User)
-                .Where(r => r.User.Uid == userId && r.Id == reviewId)
+                .Where(r => r.UserId == userId && r.Id == reviewId)
                 .FirstOrDefaultAsync();
 
             if (review == null) return ApiResponse<object>.Fail("Review not found");
@@ -124,7 +124,7 @@ namespace Booking.Application.Implementations
             return ApiResponse<List<ReviewResponse>>.Ok(reviewsDtos, "Reviews retrieved successfully.");
         }
 
-        public async Task<ApiResponse<ReviewResponse>> UpdateReviewAsync(string userId, int reviewId, ReviewUpdate request)
+        public async Task<ApiResponse<ReviewResponse>> UpdateReviewAsync(Guid userId, int reviewId, ReviewUpdate request)
         {
             var user = await _unitOfWork.Users.GetByIdAsync(userId);
             if (user == null) return ApiResponse<ReviewResponse>.Fail("User not found");
@@ -132,7 +132,7 @@ namespace Booking.Application.Implementations
 
             var review = await _unitOfWork.Reviews.Query()
                 .Include(r => r.User)
-                .Where(r => r.User.Uid == userId && r.Id == reviewId)
+                .Where(r => r.UserId == userId && r.Id == reviewId)
                 .FirstOrDefaultAsync();
             if (review == null) return ApiResponse<ReviewResponse>.Fail("Review not found");
 

@@ -18,6 +18,8 @@ namespace Booking.Infrastructure.UoW
         public IGenericRepository<RoomImage> RoomImages { get; }
         public IGenericRepository<Review> Reviews { get; }
         public IGenericRepository<Payment> Payments { get; }
+        public IGenericRepository<RefreshToken> RefreshTokens { get; }
+        public IGenericRepository<UserOtp> UserOtps { get; }
         public UnitOfWork(AppDbContext context)
         {
             _context = context;
@@ -29,6 +31,8 @@ namespace Booking.Infrastructure.UoW
             RoomImages = new GenericRepository<RoomImage>(_context);
             Reviews = new GenericRepository<Review>(_context);
             Payments = new GenericRepository<Payment>(_context);
+            RefreshTokens = new GenericRepository<RefreshToken>(_context);
+            UserOtps = new GenericRepository<UserOtp>(_context);
         }
         public async Task<int> SaveChangesAsync()
         {

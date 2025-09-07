@@ -24,5 +24,7 @@ namespace Booking.Application.DTOs.Room
 
         [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters.")]
         public string? Description { get; set; }
+        [StringLength(500, ErrorMessage = "Amenities cannot exceed 500 characters.")]
+        public string? Amenities { get; set; }
     }
 }
