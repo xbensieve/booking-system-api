@@ -1,133 +1,167 @@
+# Booking System API
 
-# RoomBooking Backend
+Booking System API is a robust backend system for managing hotel reservations, room bookings, reviews, and payments.  
+Built with **ASP.NET Core 8.0** and integrated with **Cloudinary** and **VNPAY**, it provides APIs for hotel management, room management, authentication, and payment processing.  
+The project follows a **Code First** approach with Entity Framework Core.
 
-RoomBooking Backend is a robust and scalable backend system for managing hotel reservations, room bookings, and payments. Built with ASP.NET Core and integrated with Firebase, Cloudinary, and VNPAY, it provides APIs for hotel management, room management, user authentication, and payment processing. This project is designed to support modern web and mobile applications with seamless integration and high performance.
-
+---
 
 ## Overview
 
-**Language:** C#
+**Language:** C#  
+**Framework:** ASP.NET Core 8.0  
+**Purpose:** Manage hotels, rooms, reservations, reviews, and payments  
+**Database:** SQL Server  
 
-**Framework:** ASP.NET Core 8.0
+---
 
-**Purpose:** Manage hotel reservations, rooms, reviews, and payments
+## Features
 
-**Database:**
+- User authentication & role-based authorization  
+- Hotel and room management  
+- Payment processing with **VNPAY**  
+- Email notifications  
+- Review system for hotels  
+- Integration with **Cloudinary** for image storage  
+- API documentation with **Swagger**  
 
-<img width="1498" height="763" alt="image" src="https://github.com/user-attachments/assets/74a0a722-c9d1-4df8-91e2-ff2172115382" />
-
-## Features:
-- User authentication via Firebase
-- Hotel and room management
-- Payment processing with VNPAY
-- Notification via email
-- Review system for hotels
-- Integration with Cloudinary for image storage
+---
 
 ## Project Requirements
 
-### Environment:
-  - .NET SDK 8.0
-  - Docker
-  - Firebase Admin SDK credentials (firebase-adminsdk.json)
-  - Cloudinary account credentials
-  - VNPAY credentials 
-  - SQL Server database
+### Environment
+- .NET SDK 8.0  
+- SQL Server database  
+- Cloudinary account credentials  
+- VNPAY credentials  
+
+---
 
 ### Cloudinary
-- Used for image storage and delivery.
+- Used for image storage and delivery.  
 - You can sign up for a free account at:  
-  [https://cloudinary.com](https://cloudinary.com)
-- After registration, you'll get:
-  - `CLOUDINARY_CLOUD_NAME`
-  - `CLOUDINARY_API_KEY`
-  - `CLOUDINARY_API_SECRET`
+  [https://cloudinary.com](https://cloudinary.com)  
+- After registration, you'll get:  
+  - `CLOUDINARY_CLOUD_NAME`  
+  - `CLOUDINARY_API_KEY`  
+  - `CLOUDINARY_API_SECRET`  
+
+---
 
 ### VNPAY (Payment Gateway)
-- Used for handling online payment processing.
+- Used for handling online payment processing.  
 - Register for merchant credentials at:  
-  [http://sandbox.vnpayment.vn/devreg/](http://sandbox.vnpayment.vn/devreg/)
-- After registration, you'll get:
-  - `VNP_TMNCODE`
-  - `VNP_HASHSECRET`
-  - `VNP_URL`
+  [http://sandbox.vnpayment.vn/devreg/](http://sandbox.vnpayment.vn/devreg/)  
+- After registration, you'll get:  
+  - `VNP_TMNCODE`  
+  - `VNP_HASHSECRET`  
+  - `VNP_URL`  
 
-### Dependencies:
-  - CloudinaryDotNet
-  - FirebaseAdmin
-  - Microsoft.EntityFrameworkCore
+---
 
 ## How to Setup and Run the Project
 
-1. Clone the Repository
-
+### 1. Clone the Repository
 ```bash
-  git clone https://github.com/xbensieve/smart-hotel-booking.git
-  cd smart-hotel-booking
-```
-2. Setup Environment Variables
+git clone https://github.com/xbensieve/booking-system-api.git
+cd booking-system-api
+````
 
-   - Add firebase-adminsdk.json in the Booking.Api directory
-   - Create a .env file in the Booking.Api directory
+---
 
-  `Cloudinary__CloudName=your_cloud_name`
+### 2. Setup Environment Variables
 
-  `Cloudinary__ApiKey=your_api_key`
+Create a `.env` file in the `Booking.Api` directory with the following content:
 
-  `Cloudinary__ApiSecret=your_api_secret`
+```env
+Cloudinary__CloudName=your_cloud_name
+Cloudinary__ApiKey=your_api_key
+Cloudinary__ApiSecret=your_api_secret
 
-  `VNP_TMN_CODE=`
+VNP_TMN_CODE=your_vnp_tmn_code
+VNP_HASH_SECRET=your_vnp_hash_secret
+VNP_COMMAND=pay
+VNP_CURRCODE=VND
+VNP_VERSION=2.1.0
+VNP_LOCALE=vn
+VNP_BASE_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+VNP_RETURN_URL=https://localhost:5133/api/payments/handle-payment-response
 
-  `VNP_HASH_SECRET=`
-
-  `VNP_COMMAND=pay`
-
-  `VNP_CURRCODE=VND`
-
-  `VNP_VERSION=2.1.0`
-
-  `VNP_LOCALE=vn`
-
-  `VNP_BASE_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html`
-
-  `VNP_RETURN_URL=https://{your-development-port}/api/payments/handle-payment-response`
-  
-  `MailSettings__EMAIL=`
-
-  `MailSettings__PASSWORD=`
-   
-  
-3. Run with Docker
-
-   - Build and run the Docker container
-
-```bash
-  docker-compose up --build
+MailSettings__EMAIL=your_email
+MailSettings__PASSWORD=your_email_password
 ```
 
-4. Access the API
+---
 
-   - The API will be available at http://localhost:8080/swagger/index.html
+### 3. Setup the Database (Entity Framework Core - Code First)
 
-## How to Use the Project
+If this is the **first time** you run the project, create a new migration:
 
-### API Endpoints
-  - /api/hotels: Manage hotels
-  - /api/rooms: Manage rooms
-  - /api/reviews: Submit and manage reviews
-  - /api/payments: Handle payments
+```bash
+dotnet ef migrations add InitialCreate --project Booking.Infrastructure --startup-project Booking.Api
+```
 
-### Swagger Documentation
+Then update the database:
 
-  - Access Swagger UI at http://localhost:8080/swagger for detailed API documentation
+```bash
+dotnet ef database update --project Booking.Infrastructure --startup-project Booking.Api
+```
+
+For later schema changes, run:
+
+```bash
+dotnet ef migrations add MigrationName --project Booking.Infrastructure --startup-project Booking.Api
+dotnet ef database update --project Booking.Infrastructure --startup-project Booking.Api
+```
+
+---
+
+### 4. Run the Application
+
+#### Using Visual Studio
+
+1. Open `RoomBooking.Backend.sln` in Visual Studio.
+2. Set **Booking.Api** as the startup project.
+3. Press `F5` to run.
+
+#### Using Command Line
+
+```bash
+cd Booking.Api
+dotnet run
+```
+
+API will be available at:
+👉 `http://localhost:5133`
+
+---
+
+## API Documentation
+
+Swagger is enabled for API documentation. Once the application is running, navigate to:
+ [http://localhost:5133/swagger](http://localhost:5133/swagger)
+
+---
 
 ## Troubleshooting
 
-### Docker Build Errors
-  - Verify that firebase-adminsdk.json is included in the build context
+### Database Errors
+
+* Ensure your connection string in `appsettings.json` points to a valid SQL Server instance.
+* Run `dotnet ef database update` after adding migrations.
+
 ### Cloudinary Configuration Errors
-  - Ensure Cloudinary credentials are correctly set in .env
+
+* Check that your `.env` values for Cloudinary are correct.
+
+### VNPAY Payment Issues
+
+* Ensure sandbox credentials are correct.
+* Check `VNP_RETURN_URL` matches your API running port.
+
+---
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the **MIT License**.
+See the [LICENSE](LICENSE) file for details.
