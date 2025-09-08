@@ -132,7 +132,7 @@ dotnet run
 ```
 
 API will be available at:
-👉 `http://localhost:5133`
+`https://localhost:7055/`
 
 ---
 
